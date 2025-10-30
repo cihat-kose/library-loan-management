@@ -1,0 +1,140 @@
+================================================================================
+1) Alle bøker publisert etter år 2000
+================================================================================
+ISBN          | Tittel | Forfatter   | UtgittÅr
+-----------------------------------------------
+9000000000004 | Kar    | Orhan Pamuk | 2002    
+
+================================================================================
+2) Forfatter og tittel på alle bøker (alfabetisk)
+================================================================================
+Forfatter              | Tittel                       
+------------------------------------------------------
+Fjodor Dostojevskij    | Brødrene Karamazov           
+Franz Kafka            | Forvandlingen                
+Fyodor Dostoyevski     | Suç og Ceza                  
+Gabriel García Márquez | One Hundred Years of Solitude
+Henrik Ibsen           | Et dukkehjem                 
+Jane Austen            | Pride and Prejudice          
+Knut Hamsun            | Sult                         
+Lev Tolstoy            | Savaş og Barış               
+Orhan Pamuk            | Kar                          
+Sabahattin Ali         | Kürk Mantolu Madonna         
+Victor Hugo            | Les Misérables               
+
+================================================================================
+3) Alle bøker med mer enn 300 sider
+================================================================================
+ISBN          | Tittel                        | AntallSider
+-----------------------------------------------------------
+9000000000009 | Les Misérables                | 1232       
+9000000000006 | Savaş og Barış                | 1225       
+9000000000010 | Brødrene Karamazov            | 824        
+9000000000005 | Suç og Ceza                   | 545        
+9000000000004 | Kar                           | 460        
+9000000000008 | One Hundred Years of Solitude | 417        
+
+================================================================================
+4) Alle utlån med låner og boktittel
+================================================================================
+UtlånsNr | Utlånsdato | Fornavn    | Etternavn | Tittel       
+--------------------------------------------------------------
+1        | 2025-10-29 | Sabahattin | Ali       | Forvandlingen
+
+================================================================================
+5) Antall eksemplarer per bok
+================================================================================
+ISBN          | Tittel                        | AntallEksemplarer
+-----------------------------------------------------------------
+9000000000002 | Et dukkehjem                  | 1                
+9788205342291 | Forvandlingen                 | 1                
+9000000000004 | Kar                           | 1                
+9000000000003 | Kürk Mantolu Madonna          | 1                
+9000000000009 | Les Misérables                | 1                
+9000000000008 | One Hundred Years of Solitude | 1                
+9000000000007 | Pride and Prejudice           | 1                
+9000000000006 | Savaş og Barış                | 1                
+9000000000005 | Suç og Ceza                   | 1                
+9000000000001 | Sult                          | 1                
+9000000000010 | Brødrene Karamazov            | 0                
+
+================================================================================
+6) Antall utlån per låner også de uten utlån
+================================================================================
+LNr | Fornavn    | Etternavn | AntallUtlån
+------------------------------------------
+2   | Sabahattin | Ali       | 1          
+4   | Harriet    | Backer    | 0          
+3   | Edvard     | Munch     | 0          
+6   | Kari       | Nordmann  | 0          
+5   | Pablo      | Picasso   | 0          
+1   | Vincent    | van Gogh  | 0          
+
+================================================================================
+7) Antall utlån per bok
+================================================================================
+ISBN          | Tittel                        | AntallUtlån
+-----------------------------------------------------------
+9788205342291 | Forvandlingen                 | 1          
+9000000000010 | Brødrene Karamazov            | 0          
+9000000000002 | Et dukkehjem                  | 0          
+9000000000004 | Kar                           | 0          
+9000000000003 | Kürk Mantolu Madonna          | 0          
+9000000000009 | Les Misérables                | 0          
+9000000000008 | One Hundred Years of Solitude | 0          
+9000000000007 | Pride and Prejudice           | 0          
+9000000000006 | Savaş og Barış                | 0          
+9000000000005 | Suç og Ceza                   | 0          
+9000000000001 | Sult                          | 0          
+
+================================================================================
+8) Utlån som ikke er levert
+================================================================================
+UtlånsNr | ISBN          | EksNr | LNr | Utlånsdato
+---------------------------------------------------
+1        | 9788205342291 | 1     | 2   | 2025-10-29
+
+================================================================================
+9) Lånere og deres siste utlån hvis det finnes
+================================================================================
+LNr | Fornavn    | Etternavn | SisteUtlån
+-----------------------------------------
+2   | Sabahattin | Ali       | 2025-10-29
+1   | Vincent    | van Gogh  | None      
+3   | Edvard     | Munch     | None      
+4   | Harriet    | Backer    | None      
+5   | Pablo      | Picasso   | None      
+6   | Kari       | Nordmann  | None      
+
+================================================================================
+10) Bøker utgitt på 1800 tallet tittel og år
+================================================================================
+Tittel              | UtgittÅr
+------------------------------
+Pride and Prejudice | 1813    
+Les Misérables      | 1862    
+Suç og Ceza         | 1866    
+Savaş og Barış      | 1869    
+Et dukkehjem        | 1879    
+Brødrene Karamazov  | 1880    
+Sult                | 1890    
+
+================================================================================
+11) 400 sider eller mer og nyere enn 1950
+================================================================================
+Tittel                        | AntallSider | UtgittÅr
+------------------------------------------------------
+Kar                           | 460         | 2002    
+One Hundred Years of Solitude | 417         | 1967    
+
+================================================================================
+12) Lånere uten aktive utlån Levert lik 0 finnes ikke
+================================================================================
+LNr | Fornavn | Etternavn
+-------------------------
+4   | Harriet | Backer   
+3   | Edvard  | Munch    
+6   | Kari    | Nordmann 
+5   | Pablo   | Picasso  
+1   | Vincent | van Gogh 
+
