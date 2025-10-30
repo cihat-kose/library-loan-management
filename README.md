@@ -1,123 +1,73 @@
-# Arbeidskrav 2 – Tema 2: Databasesystemer  
-### Cihat Köse  
+# Oppgave 2 – Dokumentasjon (README.md)
+
+## 1. Oversikt over databasen
+Databasen **ga_bibliotek** er utviklet for å administrere informasjon om bøker, eksemplarer, lånere og utlån ved et bibliotek.  
+Strukturen følger prinsippene for **3. normalform (3NF)** og sikrer dataintegritet gjennom primær- og fremmednøkler.
 
 ---
 
-## 1. Introduksjon
+## 2. Tabellbeskrivelser
 
-Databasen **ga_bibliotek** er utviklet for å modellere et lite bibliotek som holder oversikt over bøker, eksemplarer, lånere og utlån.  
-Strukturen bygger på prinsippene for relasjonsdatabaser og sikrer dataintegritet gjennom riktig bruk av primærnøkler, fremmednøkler og constraints.
-
----
-
-## 2. Tabellstrukturer
-
-### 2.1 bok
-| Kolonne | Datatype | Beskrivelse | Constraint |
-|----------|-----------|-------------|-------------|
-| ISBN | VARCHAR(13) | Unik identifikator for boken | PRIMARY KEY |
-| Tittel | VARCHAR(255) | Boktittel | NOT NULL |
-| Forfatter | VARCHAR(100) | Forfatterens navn | NOT NULL |
-| Forlag | VARCHAR(100) | Utgiver | NOT NULL |
-| UtgittÅr | INT | Utgivelsesår | NOT NULL |
-| AntallSider | INT | Antall sider i boken | NOT NULL |
+### 2.1 `bok`
+**Formål:** Inneholder grunnleggende informasjon om hver bok (tittel, forfatter, forlag osv.).  
+**Primærnøkkel:** `ISBN`  
+**Viktige felt:**
+- `Tittel`, `Forfatter`, `Forlag` – tekstfelt som beskriver boka.
+- `UtgittÅr`, `AntallSider` – numeriske verdier som gir detaljert informasjon.
 
 **Begrunnelse:**  
-Denne tabellen inneholder den grunnleggende bibliografiske informasjonen. ISBN fungerer som naturlig primærnøkkel.
+`ISBN` brukes som unik identifikator fordi den er globalt unik for hver bokutgave.
 
 ---
 
-### 2.2 eksemplar
-| Kolonne | Datatype | Beskrivelse | Constraint |
-|----------|-----------|-------------|-------------|
-| ISBN | VARCHAR(13) | Refererer til `bok.ISBN` | FOREIGN KEY |
-| EksNr | INT | Nummer for hvert eksemplar | PRIMARY KEY (kombinert) |
-
-**Begrunnelse:**  
-Kombinasjonen av ISBN og eksemplarnummer (EksNr) gjør hvert fysisk eksemplar unikt.
+### 2.2 `eksemplar`
+**Formål:** Representerer hvert fysiske eksemplar av en bok som biblioteket eier.  
+**Primærnøkkel:** `(ISBN, EksNr)`  
+**Fremmednøkkel:** `ISBN` refererer til `bok(ISBN)`  
+**Forklaring:**  
+Kombinasjonen av ISBN og eksemplarnummer (`EksNr`) sørger for at hvert eksemplar er unikt identifisert, selv om flere eksemplarer finnes av samme bok.
 
 ---
 
-### 2.3 låner
-| Kolonne | Datatype | Beskrivelse | Constraint |
-|----------|-----------|-------------|-------------|
-| LNr | INT | Unik identifikator for låner | PRIMARY KEY, AUTO_INCREMENT |
-| Fornavn | VARCHAR(100) | Lånerens fornavn | NOT NULL |
-| Etternavn | VARCHAR(100) | Lånerens etternavn | NOT NULL |
-| Adresse | VARCHAR(255) | Lånerens adresse | NOT NULL |
-
-**Begrunnelse:**  
-Hver låner har et unikt LNr, og navn/adresse kreves for å kunne spore utlån.
+### 2.3 `låner`
+**Formål:** Inneholder personopplysninger om personer som låner bøker.  
+**Primærnøkkel:** `LNr` (automatisk økende).  
+**Forklaring:**  
+Dette gjør det enkelt å koble lånere til deres utlån og opprettholde referanseintegritet.
 
 ---
 
-### 2.4 utlån
-| Kolonne | Datatype | Beskrivelse | Constraint |
-|----------|-----------|-------------|-------------|
-| UtlånsNr | INT | Unik identifikator for utlånet | PRIMARY KEY, AUTO_INCREMENT |
-| ISBN | VARCHAR(13) | Bok som lånes | FOREIGN KEY → eksemplar.ISBN |
-| EksNr | INT | Eksemplarnummer | FOREIGN KEY → eksemplar.EksNr |
-| LNr | INT | Lånerens ID | FOREIGN KEY → låner.LNr |
-| Utlånsdato | DATE | Dato utlånet ble registrert | NOT NULL |
-| Levert | TINYINT | 0 = ikke levert, 1 = levert | CHECK (Levert IN (0,1)) |
-
-**Begrunnelse:**  
-Tabellen kobler sammen låner og bokeksemplar og registrerer status for utlånet.
-
----
-
-## 3. Primærnøkler og Fremmednøkler
-
-| Tabell | Primærnøkkel | Fremmednøkler |
-|---------|----------------|----------------|
-| bok | ISBN | – |
-| eksemplar | (ISBN, EksNr) | ISBN → bok.ISBN |
-| låner | LNr | – |
-| utlån | UtlånsNr | LNr → låner.LNr<br> (ISBN, EksNr) → eksemplar(ISBN, EksNr) |
+### 2.4 `utlån`
+**Formål:** Registrerer hvert utlån, inkludert dato og leveringsstatus.  
+**Primærnøkkel:** `UtlånsNr` (automatisk økende).  
+**Fremmednøkler:**
+- `(ISBN, EksNr)` → `eksemplar(ISBN, EksNr)`
+- `LNr` → `låner(LNr)`
 
 **Forklaring:**  
-Fremmednøkler sikrer at utlån kun kan registreres for eksisterende bøker, eksemplarer og lånere.  
-Dette ivaretar referanseintegritet i databasen.
+Ved å bruke fremmednøkler sikres at utlån bare kan registreres for eksisterende bøker, eksemplarer og lånere.  
+Feltet `Levert` bruker en **CHECK-konstraint** for å sikre at verdien alltid er enten `0` (ikke levert) eller `1` (levert).
 
 ---
 
-## 4. Constraints og dataintegritet
-
-| Constraint-type | Bruk | Formål |
-|------------------|------|--------|
-| PRIMARY KEY | Alle tabeller | Unik identifikasjon |
-| FOREIGN KEY | eksemplar, utlån | Referanseintegritet |
-| NOT NULL | Viktige felt | Hindrer manglende data |
-| CHECK | utlån.Levert | Sikrer gyldige statusverdier |
-| AUTO_INCREMENT | låner, utlån | Automatisk genererte ID-er |
+## 3. Relasjonsoversikt
+```
+bok (ISBN) 1---∞ eksemplar (ISBN, EksNr)
+eksemplar (ISBN, EksNr) 1---∞ utlån (UtlånsNr)
+låner (LNr) 1---∞ utlån (LNr)
+```
 
 ---
 
-## 5. Normalisering
-
-Databasen er normalisert til **tredje normalform (3NF)**:
-1. **1NF:** Alle attributter er atomære.  
-2. **2NF:** Alle ikke-nøkkelfelt er fullt avhengige av primærnøkkelen.  
-3. **3NF:** Ingen transitive avhengigheter – hver tabell beskriver kun ett konsept.
-
----
-
-## 6. Relasjoner (oversikt)
-
-- En bok (`bok`) kan ha flere eksemplarer (`eksemplar`).  
-- Hvert eksemplar kan lånes ut flere ganger (`utlån`).  
-- Hver utlån er knyttet til én låner (`låner`).  
-
-Skjemaet nedenfor viser koblingene mellom tabellene:
-
-![Databaseskjema](oppgave2_skjema.png)
+## 4. Designvalg og integritet
+- **Dataintegritet:** Opprettholdes gjennom primær- og fremmednøkler samt CHECK-konstraint.  
+- **Oppdatering og sletting:** `ON UPDATE CASCADE` sikrer at endringer i bokdata videreføres automatisk.  
+- **Ytelse:** Indekser opprettes implisitt gjennom primærnøklene.  
+- **Normalisering:** Datamodellen unngår redundans og følger 3NF.
 
 ---
 
-## 7. Konklusjon
+## 5. Kildeskjema
+*(Figur hentet fra Oppgave 2-skjema.png)*
 
-Databasen **ga_bibliotek** er strukturert og konsistent.  
-Gjennom bruk av relasjoner, constraints og riktig normalisering ivaretas både dataintegritet og fleksibilitet i systemet.  
-Strukturen støtter alle forespurte operasjoner som søk, registrering og historikk over utlån.
-
----
+![Database-skjema](oppgave2_skjema.png)
