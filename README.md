@@ -1,6 +1,16 @@
-# 📚 ga_bibliotek – README (Oppgave 2)
+# 📚 Gokstad Akademiet Arbeidskrav 2 – Cihat Köse
+
+Dette prosjektet inneholder alle deler av Arbeidskrav 2:
+
+- **Oppgave 1**: SQL databaseoppsett for `ga_bibliotek`
+- **Oppgave 2**: Dokumentasjon og databaseskjema
+- **Oppgave 3**: 12 SQL-spørringer
+- **Oppgave 4**: Python-program som kjører spørringene og lagrer resultatene
+
+---
 
 ## 🔍 Oversikt
+
 Denne databasen modellerer et lite bibliotek som holder orden på **bøker**, **fysiske eksemplarer**, **lånere** og **utlån**.  
 Løsningen består av fire tabeller: `bok`, `eksemplar`, `låner` og `utlån`.
 
@@ -12,7 +22,6 @@ Løsningen består av fire tabeller: `bok`, `eksemplar`, `låner` og `utlån`.
 ## 📄 Tabellforklaringer
 
 ### 📘 bok
-Inneholder informasjon om hver bok i biblioteket.
 
 | Felt         | Beskrivelse                    |
 |--------------|---------------------------------|
@@ -28,7 +37,6 @@ Inneholder informasjon om hver bok i biblioteket.
 ---
 
 ### 📗 eksemplar
-Representerer hvert fysisk eksemplar av en bok.
 
 | Felt     | Beskrivelse                         |
 |----------|--------------------------------------|
@@ -41,7 +49,6 @@ Representerer hvert fysisk eksemplar av en bok.
 ---
 
 ### 👤 låner
-Inneholder informasjon om personer som låner bøker.
 
 | Felt          | Beskrivelse                            |
 |---------------|-----------------------------------------|
@@ -55,7 +62,6 @@ Inneholder informasjon om personer som låner bøker.
 ---
 
 ### 🔄 utlån
-Registrerer hvert utlån av en bok.
 
 | Felt         | Beskrivelse                               |
 |--------------|--------------------------------------------|
@@ -70,6 +76,7 @@ Registrerer hvert utlån av en bok.
 ---
 
 ## 🔗 Relasjoner og Referanseintegritet
+
 - `eksemplar.ISBN` → `bok.ISBN` (**ON UPDATE CASCADE, ON DELETE RESTRICT**)
 - `utlån.LNr` → `låner.LNr`
 - `utlån (ISBN, EksNr)` → `eksemplar (ISBN, EksNr)`
@@ -119,3 +126,13 @@ Skjemaet nedenfor illustrerer relasjonene mellom tabellene og viser hvilke kolon
 > Hver utlån (`utlån`) er knyttet til et spesifikt eksemplar og én låner (`låner`).
 
 ![Databaseskjema](oppgave2_skjema.png)
+
+---
+
+## 💡 Kjøring av programmet
+
+1. Start MySQL-tjener og opprett databasen med `oppgave1.sql`
+2. Kjør de tolv SQL-spørringene via `oppgave3.sql` (eller via Python)
+3. Kjør `oppgave4.py` for å hente ut spørringsresultater og lagre til `oppgave4_rapor.txt`:
+   ```bash
+   python oppgave4.py
