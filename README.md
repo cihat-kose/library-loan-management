@@ -1,138 +1,59 @@
-# 📚 Gokstad Akademiet Arbeidskrav 2 – Cihat Köse
+# 📘 Arbeidskrav 2 – Databasebeskrivelse
 
-Dette prosjektet inneholder alle deler av Arbeidskrav 2:
+Denne README-filen dokumenterer databasen `ga_bibliotek` slik den er definert i `oppgave1.sql`. Beskrivelsen oppsummerer strukturen, nøklene og constraint-ene som kreves i oppgavebeskrivelsen for Arbeidskrav 2.
 
-- **Oppgave 1**: SQL databaseoppsett for `ga_bibliotek`
-- **Oppgave 2**: Dokumentasjon og databaseskjema
-- **Oppgave 3**: 12 SQL-spørringer
-- **Oppgave 4**: Python-program som kjører spørringene og lagrer resultatene
+## Tabellstrukturer
 
----
+### `bok`
+| Kolonne | Datatype | Constraint | Beskrivelse |
+| --- | --- | --- | --- |
+| `ISBN` | `VARCHAR(13)` | `PRIMARY KEY` | Unik identifikator for hver bok.【F:oppgave1.sql†L12-L19】 |
+| `Tittel` | `VARCHAR(255)` | `NOT NULL` | Navn på boken.【F:oppgave1.sql†L12-L19】 |
+| `Forfatter` | `VARCHAR(100)` | `NOT NULL` | Navn på forfatter.【F:oppgave1.sql†L12-L19】 |
+| `Forlag` | `VARCHAR(100)` | `NOT NULL` | Utgiver av boken.【F:oppgave1.sql†L12-L19】 |
+| `UtgittÅr` | `INT` | `NOT NULL` | Publiseringsår.【F:oppgave1.sql†L12-L19】 |
+| `AntallSider` | `INT` | `NOT NULL` | Antall sider i boken.【F:oppgave1.sql†L12-L19】 |
 
-## 🔍 Oversikt
+### `eksemplar`
+| Kolonne | Datatype | Constraint | Beskrivelse |
+| --- | --- | --- | --- |
+| `ISBN` | `VARCHAR(13)` | Del av `PRIMARY KEY`, `NOT NULL`, `FOREIGN KEY` til `bok.ISBN` | Hvilken bok eksemplaret tilhører.【F:oppgave1.sql†L22-L29】 |
+| `EksNr` | `INT` | Del av `PRIMARY KEY`, `NOT NULL` | Løpenummer for eksemplaret.【F:oppgave1.sql†L22-L29】 |
 
-Denne databasen modellerer et lite bibliotek som holder orden på **bøker**, **fysiske eksemplarer**, **lånere** og **utlån**.  
-Løsningen består av fire tabeller: `bok`, `eksemplar`, `låner` og `utlån`.
+### `låner`
+| Kolonne | Datatype | Constraint | Beskrivelse |
+| --- | --- | --- | --- |
+| `LNr` | `INT` | `AUTO_INCREMENT PRIMARY KEY` | Unik identifikator for hver låner.【F:oppgave1.sql†L32-L37】 |
+| `Fornavn` | `VARCHAR(100)` | `NOT NULL` | Lånerens fornavn.【F:oppgave1.sql†L32-L37】 |
+| `Etternavn` | `VARCHAR(100)` | `NOT NULL` | Lånerens etternavn.【F:oppgave1.sql†L32-L37】 |
+| `Adresse` | `VARCHAR(255)` | `NOT NULL` | Postadresse til låneren.【F:oppgave1.sql†L32-L37】 |
 
-- Alle relasjoner er opprettet med **fremmednøkler** for å ivareta referanseintegritet.
-- Databasen bruker **utf8mb4** som tegnsett og **InnoDB** som lagringsmotor for å støtte internasjonale tegn og stabile relasjoner.
+### `utlån`
+| Kolonne | Datatype | Constraint | Beskrivelse |
+| --- | --- | --- | --- |
+| `UtlånsNr` | `INT` | `AUTO_INCREMENT PRIMARY KEY` | Unik identifikator for utlånet.【F:oppgave1.sql†L40-L54】 |
+| `ISBN` | `VARCHAR(13)` | `NOT NULL`, del av `FOREIGN KEY` til `eksemplar` | Hvilken bok som lånes.【F:oppgave1.sql†L40-L54】 |
+| `EksNr` | `INT` | `NOT NULL`, del av `FOREIGN KEY` til `eksemplar` | Hvilket eksemplar som lånes.【F:oppgave1.sql†L40-L54】 |
+| `LNr` | `INT` | `NOT NULL`, `FOREIGN KEY` til `låner.LNr` | Hvem som låner boken.【F:oppgave1.sql†L40-L54】 |
+| `Utlånsdato` | `DATE` | `NOT NULL` | Datoen utlånet starter.【F:oppgave1.sql†L40-L54】 |
+| `Levert` | `TINYINT` | `NOT NULL`, `CHECK (Levert IN (0,1))` | Status for om eksemplaret er levert.【F:oppgave1.sql†L40-L54】 |
 
----
+## Primærnøkler og fremmednøkler
+- `bok.ISBN` er en naturlig primærnøkkel som identifiserer hver bok.【F:oppgave1.sql†L12-L19】
+- `eksemplar` har en sammensatt primærnøkkel (`ISBN`, `EksNr`) slik at hvert fysiske eksemplar blir unikt. Fremmednøkkelen `fk_eksemplar_bok` binder eksemplaret til en gyldig bok og oppdaterer `ISBN` automatisk ved endringer.【F:oppgave1.sql†L22-L29】
+- `låner.LNr` er autoinkrement, noe som gir hver låner en unik identitet uten manuell oppfølging.【F:oppgave1.sql†L32-L37】
+- `utlån.UtlånsNr` er autoinkrement, mens fremmednøklene `fk_utlån_eksemplar` og `fk_utlån_låner` sikrer at hvert utlån peker til et eksisterende eksemplar og en eksisterende låner.【F:oppgave1.sql†L40-L54】
 
-## 📄 Tabellforklaringer
+### Relasjoner
+- Én rad i `bok` kan knyttes til flere rader i `eksemplar` via `fk_eksemplar_bok`, og gir en én-til-mange-relasjon for fysiske kopier.【F:oppgave1.sql†L22-L29】
+- `utlån` kobler sammen låner og eksemplar og danner mange-til-én-relasjoner mot begge tabeller, slik at hvert utlån gjelder én låner og ett bestemt eksemplar.【F:oppgave1.sql†L40-L54】
 
-### 📘 bok
+## Constraints og dataintegritet
+- `NOT NULL` på sentrale kolonner hindrer ufullstendige oppføringer i alle tabellene.【F:oppgave1.sql†L12-L54】
+- `AUTO_INCREMENT` på `låner.LNr` og `utlån.UtlånsNr` genererer nye nøkler automatisk og forenkler registrering av nye rader.【F:oppgave1.sql†L32-L54】
+- `CHECK (Levert IN (0,1))` i `utlån` begrenser statusfeltet til lovlige verdier og reflekterer kravene om 0/1-status i oppgaven.【F:oppgave1.sql†L40-L54】
+- `ENGINE=InnoDB` brukes for alle tabellene for å få referanseintegritet og støtte for fremmednøkler.【F:oppgave1.sql†L12-L54】
+- Databasen settes opp med `utf8mb4` og `utf8mb4_unicode_ci` slik at norske tegn og andre spesialtegn blir lagret korrekt.【F:oppgave1.sql†L4-L9】
 
-| Felt         | Beskrivelse                    |
-|--------------|---------------------------------|
-| ISBN (PK)    | Unik identifikator for hver bok |
-| Tittel       | Navnet på boken                |
-| Forfatter    | Forfatterens navn              |
-| Forlag       | Utgiver                        |
-| UtgittÅr     | Publiseringsår                 |
-| AntallSider  | Antall sider i boken           |
-
-> **Begrunnelse:** ISBN er en naturlig primærnøkkel. Øvrige felt er obligatoriske for en komplett katalog.
-
----
-
-### 📗 eksemplar
-
-| Felt     | Beskrivelse                         |
-|----------|--------------------------------------|
-| ISBN     | Refererer til `bok.ISBN`            |
-| EksNr    | Nummer på eksemplaret               |
-| PK       | Kombinasjon av `ISBN` og `EksNr`    |
-
-> **Begrunnelse:** Kombinasjonen av ISBN og EksNr gjør hvert eksemplar unikt.
-
----
-
-### 👤 låner
-
-| Felt          | Beskrivelse                            |
-|---------------|-----------------------------------------|
-| LNr (PK)      | Unik identifikator for hver låner      |
-| Fornavn       | Lånerens fornavn                       |
-| Etternavn     | Lånerens etternavn                     |
-| Adresse       | Lånerens adresse                       |
-
-> **Begrunnelse:** Automatisk økende ID er hensiktsmessig. Navn og adresse kreves for oppfølging.
-
----
-
-### 🔄 utlån
-
-| Felt         | Beskrivelse                               |
-|--------------|--------------------------------------------|
-| UtlånsNr (PK)| Unik ID for utlånet                        |
-| ISBN, EksNr  | Refererer til `eksemplar`                 |
-| LNr          | Refererer til `låner`                     |
-| Utlånsdato   | Dato utlånet ble registrert               |
-| Levert       | 0 = ikke levert, 1 = levert               |
-
-> **Begrunnelse:** Kobler sammen spesifikke eksemplarer med lånere og registrerer status.
-
----
-
-## 🔗 Relasjoner og Referanseintegritet
-
-- `eksemplar.ISBN` → `bok.ISBN` (**ON UPDATE CASCADE, ON DELETE RESTRICT**)
-- `utlån.LNr` → `låner.LNr`
-- `utlån (ISBN, EksNr)` → `eksemplar (ISBN, EksNr)`
-
-> Dette sikrer at utlån kun skjer for eksisterende bøker, eksemplarer og lånere. Sletting av bøker/lånere med utlån hindres.
-
----
-
-## 📐 Normalisering
-
-Databasen er normalisert til **tredje normalform (3NF)**:
-
-1. **1NF:** Alle felt har atomære verdier, ingen gjentakelser.
-2. **2NF:** Ingen felt er delvis avhengige av sammensatte nøkler.
-3. **3NF:** Ingen transitive avhengigheter – hver tabell beskriver ett entydig tema.
-
----
-
-## 🔧 Datatyper og Constraints
-
-- `VARCHAR` for tekst  
-- `INT` for numeriske verdier  
-- `DATE` for datoer  
-- `TINYINT` for boolske verdier (`Levert`)  
-- `NOT NULL` på påkrevde felt  
-- `CHECK (Levert IN (0,1))` sikrer gyldige statusverdier  
-
----
-
-## 🛡️ Hvordan databasen sikrer gyldige data
-
-- Fremmednøkler hindrer ugyldige referanser  
-- `NOT NULL` hindrer tomme verdier i viktige felt  
-- `CHECK` sikrer at `Levert` kun er 0 eller 1  
-- Bruk av **InnoDB** støtter transaksjoner for konsistens  
-
----
-
-## 🗂️ Databaseskjema
-
-Skjemaet nedenfor illustrerer relasjonene mellom tabellene og viser hvilke kolonner som er:
-
-- **Primærnøkler (PK)**
-- **Fremmednøkler (FK)**
-
-> En bok (`bok`) kan ha flere eksemplarer (`eksemplar`).  
-> Hver utlån (`utlån`) er knyttet til et spesifikt eksemplar og én låner (`låner`).
-
+## ER-diagram
 ![Databaseskjema](oppgave2_skjema.png)
-
----
-
-## 💡 Kjøring av programmet
-
-1. Start MySQL-tjener og opprett databasen med `oppgave1.sql`
-2. Kjør de tolv SQL-spørringene via `oppgave3.sql` (eller via Python)
-3. Kjør `oppgave4.py` for å hente ut spørringsresultater og lagre til `oppgave4_rapor.txt`:
-   ```bash
-   python oppgave4.py
