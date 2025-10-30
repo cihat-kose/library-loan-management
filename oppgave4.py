@@ -1,38 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Oppgave 4 – Python + MySQL Connector
+Oppgave 4 – Python + MySQL Connector (kravoppfyllelse A–F)
 
-Formål:
-- Koble til databasen ga_bibliotek
-- Utføre tolv SQL-spørringer (fra Oppgave 3)
-- Skrive resultatene pent formatert til oppgave4_rapor.txt
+Funksjoner:
+- connect_to_database()  [A]
+- vis_alle_boker()       [B]
+- sok_bok(sokeord)       [C]
+- registrer_utlan(lnr, isbn, eksnr, utlansdato)  [D]
+- lever_bok(utlansnr)    [E]
+- vis_lanerhistorikk(lnr) [F]
+
+Kjøring (eksempler):
+  python oppgave4.py --vis-alle-boker
+  python oppgave4.py --sok-bok "tolstoy"
+  python oppgave4.py --registrer-utlan --lnr 2 --isbn 9788205342291 --eksnr 1 --dato 2025-10-31
+  python oppgave4.py --lever-bok --utlansnr 3
+  python oppgave4.py --lanerhistorikk --lnr 2
 """
 
 import os
 import sys
 import argparse
+from typing import List, Tuple, Optional
 import mysql.connector
 from mysql.connector import Error
 
-# ---------------------------------------------------------------------------
-# Oppretter databaseforbindelse
-# ---------------------------------------------------------------------------
+# ------------------------- [A] Tilkobling -------------------------
 def connect_to_database():
-    parser = argparse.ArgumentParser(description="Koble til MySQL-database")
+    parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
     parser.add_argument("--port", type=int, default=int(os.getenv("PORT", 3306)))
     parser.add_argument("--user", default=os.getenv("USER", "root"))
     parser.add_argument("--password", default=os.getenv("PASSWORD", ""))
     parser.add_argument("--database", default=os.getenv("DATABASE", "ga_bibliotek"))
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     try:
         conn = mysql.connector.connect(
-            host=args.host,
-            port=args.port,
-            user=args.user,
-            password=args.password,
+            host=args.host, port=args.port,
+            user=args.user, password=args.password,
             database=args.database
         )
         return conn
@@ -40,118 +47,156 @@ def connect_to_database():
         print(f"Tilkoblingsfeil: {err}", file=sys.stderr)
         sys.exit(1)
 
-# ---------------------------------------------------------------------------
-# Kjøres for SELECT-spørringer og formaterer resultatene pent
-# ---------------------------------------------------------------------------
-def run_query(conn, query: str, title: str, outfile):
-    cursor = conn.cursor()
-    cursor.execute(query)
-    rows = cursor.fetchall()
-    cols = [desc[0] for desc in cursor.description]
-
-    # Skriv overskrift
-    outfile.write("=" * 80 + "\n")
-    outfile.write(f"{title}\n")
-    outfile.write("=" * 80 + "\n")
-
-    # Ingen rader
+# ------------------------- Hjelpere -------------------------
+def _print_rows(cols: List[str], rows: List[Tuple]):
     if not rows:
-        outfile.write("(ingen data)\n\n")
-        cursor.close()
+        print("(ingen data)")
+        return
+    header = " | ".join(cols)
+    sep = "-" * len(header)
+    print(header)
+    print(sep)
+    for r in rows:
+        print(" | ".join(str(x) for x in r))
+
+# ------------------------- [B] Vis alle bøker -------------------------
+def vis_alle_boker(conn):
+    cur = conn.cursor()
+    cur.execute("SELECT ISBN, Tittel, Forfatter, Forlag, UtgittÅr, AntallSider FROM bok ORDER BY Tittel;")
+    cols = [d[0] for d in cur.description]
+    rows = cur.fetchall()
+    _print_rows(cols, rows)
+    cur.close()
+
+# ------------------------- [C] Søk etter bok -------------------------
+def sok_bok(conn, sokeord: str):
+    cur = conn.cursor()
+    like = f"%{sokeord}%"
+    cur.execute(
+        "SELECT ISBN, Tittel, Forfatter, Forlag, UtgittÅr, AntallSider "
+        "FROM bok WHERE Tittel LIKE %s OR Forfatter LIKE %s ORDER BY Forfatter, Tittel;",
+        (like, like)
+    )
+    cols = [d[0] for d in cur.description]
+    rows = cur.fetchall()
+    _print_rows(cols, rows)
+    cur.close()
+
+# ------------------------- [D] Registrer nytt utlån -------------------------
+def registrer_utlan(conn, lnr: int, isbn: str, eksnr: int, utlansdato: str):
+    cur = conn.cursor()
+
+    # 1) Finnes eksemplaret?
+    cur.execute("SELECT 1 FROM eksemplar WHERE ISBN=%s AND EksNr=%s;", (isbn, eksnr))
+    if cur.fetchone() is None:
+        cur.close()
+        print("❌ Eksemplaret finnes ikke.")
         return
 
-    # Kolonnavn
-    col_line = " | ".join(cols)
-    outfile.write(col_line + "\n")
-    outfile.write("-" * len(col_line) + "\n")
+    # 2) Allerede utlånt?
+    cur.execute(
+        "SELECT 1 FROM utlån WHERE ISBN=%s AND EksNr=%s AND Levert=0;",
+        (isbn, eksnr)
+    )
+    if cur.fetchone():
+        cur.close()
+        print("❌ Eksemplaret er allerede utlånt (Levert=0).")
+        return
 
-    # Rader
-    for r in rows:
-        outfile.write(" | ".join(str(x) for x in r) + "\n")
-    outfile.write("\n")
+    # 3) Registrer utlånet (Levert=0)
+    try:
+        cur.execute(
+            "INSERT INTO utlån (ISBN, EksNr, LNr, Utlånsdato, Levert) "
+            "VALUES (%s, %s, %s, %s, 0);",
+            (isbn, eksnr, lnr, utlansdato)
+        )
+        conn.commit()
+        print("✅ Utlån registrert.")
+    except Error as e:
+        conn.rollback()
+        print(f"❌ Feil ved innsending: {e}")
+    finally:
+        cur.close()
 
-    cursor.close()
+# ------------------------- [E] Lever tilbake bok -------------------------
+def lever_bok(conn, utlansnr: int):
+    cur = conn.cursor()
+    cur.execute("UPDATE utlån SET Levert=1 WHERE UtlånsNr=%s;", (utlansnr,))
+    if cur.rowcount == 0:
+        print("❌ Fant ikke utlånsnummeret.")
+    else:
+        conn.commit()
+        print("✅ Markert som levert.")
+    cur.close()
 
-# ---------------------------------------------------------------------------
-# Hovedprogram
-# ---------------------------------------------------------------------------
+# ------------------------- [F] Vis lånerhistorikk -------------------------
+def vis_lanerhistorikk(conn, lnr: int):
+    cur = conn.cursor()
+    # Lånerens info
+    cur.execute("SELECT Fornavn, Etternavn, Adresse FROM låner WHERE LNr=%s;", (lnr,))
+    info = cur.fetchone()
+    if not info:
+        print("❌ Låner finnes ikke.")
+        cur.close()
+        return
+    print(f"Låner: {info[0]} {info[1]} – {info[2]}")
+
+    # Alle utlån (aktive og returnerte) med bokinfo
+    cur.execute(
+        "SELECT u.UtlånsNr, b.Tittel, b.Forfatter, u.Utlånsdato, "
+        "CASE WHEN u.Levert=0 THEN 'utlånt' ELSE 'levert' END AS Status "
+        "FROM utlån u "
+        "JOIN bok b ON b.ISBN = u.ISBN "
+        "WHERE u.LNr=%s "
+        "ORDER BY u.Utlånsdato DESC, u.UtlånsNr DESC;",
+        (lnr,)
+    )
+    cols = [d[0] for d in cur.description]
+    rows = cur.fetchall()
+    _print_rows(cols, rows)
+    cur.close()
+
+# ------------------------- CLI -------------------------
 def main():
+    base = argparse.ArgumentParser()
+    base.add_argument("--vis-alle-boker", action="store_true")
+    base.add_argument("--sok-bok", dest="sok", type=str)
+    base.add_argument("--registrer-utlan", action="store_true")
+    base.add_argument("--lever-bok", action="store_true")
+    base.add_argument("--lanerhistorikk", action="store_true")
+    base.add_argument("--lnr", type=int)
+    base.add_argument("--isbn", type=str)
+    base.add_argument("--eksnr", type=int)
+    base.add_argument("--dato", type=str)
+    base.add_argument("--utlansnr", type=int)
+
+    args = base.parse_args()
     conn = connect_to_database()
 
-    queries = [
-        # 1)
-        ("1) Alle bøker publisert etter år 2000",
-         "SELECT ISBN, Tittel, Forfatter, UtgittÅr "
-         "FROM bok WHERE UtgittÅr > 2000 "
-         "ORDER BY UtgittÅr;"),
-
-        # 2)
-        ("2) Forfatter og tittel på alle bøker (alfabetisk)",
-         "SELECT Forfatter, Tittel FROM bok ORDER BY Forfatter, Tittel;"),
-
-        # 3)
-        ("3) Alle bøker med mer enn 300 sider",
-         "SELECT ISBN, Tittel, AntallSider FROM bok WHERE AntallSider > 300;"),
-
-        # 4)
-        ("4) Alle utlån med låner og boktittel",
-         "SELECT u.UtlånsNr, u.Utlånsdato, l.Fornavn, l.Etternavn, b.Tittel "
-         "FROM utlån u "
-         "JOIN låner l ON u.LNr = l.LNr "
-         "JOIN bok b ON b.ISBN = u.ISBN;"),
-
-        # 5)
-        ("5) Antall eksemplarer per bok",
-         "SELECT b.ISBN, b.Tittel, COUNT(e.EksNr) AS AntallEksemplarer "
-         "FROM bok b LEFT JOIN eksemplar e ON b.ISBN = e.ISBN "
-         "GROUP BY b.ISBN, b.Tittel;"),
-
-        # 6)
-        ("6) Antall utlån per låner også de uten utlån",
-         "SELECT l.LNr, l.Fornavn, l.Etternavn, COUNT(u.UtlånsNr) AS AntallUtlån "
-         "FROM låner l LEFT JOIN utlån u ON l.LNr = u.LNr "
-         "GROUP BY l.LNr, l.Fornavn, l.Etternavn;"),
-
-        # 7)
-        ("7) Antall utlån per bok",
-         "SELECT b.ISBN, b.Tittel, COUNT(u.UtlånsNr) AS AntallUtlån "
-         "FROM bok b LEFT JOIN utlån u ON b.ISBN = u.ISBN "
-         "GROUP BY b.ISBN, b.Tittel;"),
-
-        # 8)
-        ("8) Utlån som ikke er levert",
-         "SELECT UtlånsNr, ISBN, EksNr, LNr, Utlånsdato "
-         "FROM utlån WHERE Levert = 0;"),
-
-        # 9)
-        ("9) Lånere og deres siste utlån hvis det finnes",
-         "SELECT l.LNr, l.Fornavn, l.Etternavn, MAX(u.Utlånsdato) AS SisteUtlån "
-         "FROM låner l LEFT JOIN utlån u ON l.LNr = u.LNr "
-         "GROUP BY l.LNr, l.Fornavn, l.Etternavn;"),
-
-        # 10)
-        ("10) Bøker utgitt på 1800 tallet tittel og år",
-         "SELECT Tittel, UtgittÅr FROM bok "
-         "WHERE UtgittÅr BETWEEN 1800 AND 1899;"),
-
-        # 11)
-        ("11) 400 sider eller mer og nyere enn 1950",
-         "SELECT Tittel, AntallSider, UtgittÅr "
-         "FROM bok WHERE AntallSider >= 400 AND UtgittÅr > 1950;"),
-
-        # 12)
-        ("12) Lånere uten aktive utlån Levert lik 0 finnes ikke",
-         "SELECT l.LNr, l.Fornavn, l.Etternavn "
-         "FROM låner l "
-         "WHERE l.LNr NOT IN (SELECT LNr FROM utlån WHERE Levert = 0);"),
-    ]
-
-    with open("oppgave4_rapor.txt", "w", encoding="utf-8") as f:
-        for title, q in queries:
-            run_query(conn, q, title, f)
-
-    conn.close()
-    print("✅ Rapport ferdig generert: oppgave4_rapor.txt")
+    try:
+        if args.vis_alle_boker:
+            vis_alle_boker(conn)
+        if args.sok:
+            sok_bok(conn, args.sok)
+        if args.registrer_utlan:
+            if args.lnr is None or args.isbn is None or args.eksnr is None or args.dato is None:
+                print("❌ Mangler --lnr, --isbn, --eksnr eller --dato")
+            else:
+                registrer_utlan(conn, args.lnr, args.isbn, args.eksnr, args.dato)
+        if args.lever_bok:
+            if args.utlansnr is None:
+                print("❌ Mangler --utlansnr")
+            else:
+                lever_bok(conn, args.utlansnr)
+        if args.lanerhistorikk:
+            if args.lnr is None:
+                print("❌ Mangler --lnr")
+            else:
+                vis_lanerhistorikk(conn, args.lnr)
+        if not any([args.vis_alle_boker, args.sok, args.registrer_utlan, args.lever_bok, args.lanerhistorikk]):
+            print("Bruk --help for alternativer.")
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     main()

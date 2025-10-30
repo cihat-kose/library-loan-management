@@ -71,3 +71,39 @@ låner (LNr) 1---∞ utlån (LNr)
 *(Figur hentet fra Oppgave 2-skjema.png)*
 
 ![Database-skjema](oppgave2_skjema.png)
+
+## Vedlegg A – Kolonner, datatyper og constraints (eksplisitt)
+
+**bok**
+- `ISBN VARCHAR(13)` — **PRIMARY KEY**
+- `Tittel VARCHAR(255)` — **NOT NULL**
+- `Forfatter VARCHAR(100)` — **NOT NULL**
+- `Forlag VARCHAR(100)` — **NOT NULL**
+- `UtgittÅr INT` — **NOT NULL**
+- `AntallSider INT` — **NOT NULL**
+
+**eksemplar**
+- `ISBN VARCHAR(13)` — **NOT NULL**, **FOREIGN KEY** → `bok(ISBN)`
+- `EksNr INT` — **NOT NULL**
+- **PRIMARY KEY** (`ISBN`, `EksNr`)
+
+**låner**
+- `LNr INT` — **PRIMARY KEY**, **AUTO_INCREMENT**
+- `Fornavn VARCHAR(100)` — **NOT NULL**
+- `Etternavn VARCHAR(100)` — **NOT NULL**
+- `Adresse VARCHAR(255)` — **NOT NULL**
+
+**utlån**
+- `UtlånsNr INT` — **PRIMARY KEY**, **AUTO_INCREMENT**
+- `ISBN VARCHAR(13)` — **NOT NULL**
+- `EksNr INT` — **NOT NULL**
+- `LNr INT` — **NOT NULL**
+- `Utlånsdato DATE` — **NOT NULL**
+- `Levert TINYINT` — **NOT NULL**, **CHECK (Levert IN (0,1))**
+- **FOREIGN KEY** (`ISBN`, `EksNr`) → `eksemplar(ISBN, EksNr)`
+- **FOREIGN KEY** (`LNr`) → `låner(LNr)`
+
+**Merk**
+- Alle tabeller bruker `utf8mb4` og `utf8mb4_unicode_ci`.
+- Fremmednøkler er satt med `ON UPDATE CASCADE` og `ON DELETE RESTRICT` der det er relevant.
+- `Levert` feltet modellerer status: 0 utlånt, 1 levert.
