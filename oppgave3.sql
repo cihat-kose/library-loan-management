@@ -76,3 +76,16 @@ LEFT JOIN eksemplar e ON e.ISBN = b.ISBN
 LEFT JOIN utlån u ON u.ISBN = e.ISBN AND u.EksNr = e.EksNr
 GROUP BY b.Forfatter
 ORDER BY AntallUtlån DESC, b.Forfatter;
+
+
+-- (Ekstra) Alternativ for spørring 11 med NOT EXISTS (samme resultat):
+-- Viser bøker som aldri har vært utlånt (uavhengig av antall eksemplarer)
+SELECT b.ISBN, b.Tittel
+FROM bok b
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM eksemplar e
+  JOIN utlån u ON u.ISBN = e.ISBN AND u.EksNr = e.EksNr
+  WHERE e.ISBN = b.ISBN
+)
+ORDER BY b.Tittel;

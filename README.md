@@ -107,3 +107,15 @@ låner (LNr) 1---∞ utlån (LNr)
 - Alle tabeller bruker `utf8mb4` og `utf8mb4_unicode_ci`.
 - Fremmednøkler er satt med `ON UPDATE CASCADE` og `ON DELETE RESTRICT` der det er relevant.
 - `Levert` feltet modellerer status: 0 utlånt, 1 levert.
+
+
+## Ytelse og indekser
+For å sikre gode kjøretider ved spørringer på fremmednøkler, anbefales eksplisitte indekser på:
+- `eksemplar(ISBN)`
+- `utlån(ISBN, EksNr)`
+- `utlån(LNr)`
+
+I tillegg kan man vurdere indeks på `bok(Forfatter)` for søk etter forfatter.
+
+> Merk: `CHECK (Levert IN (0,1))` håndheves i MySQL 8.0+. I eldre versjoner kan uttrykket være informativt uten å bli tvangsgjennomført.
+
