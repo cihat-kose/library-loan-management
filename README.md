@@ -132,3 +132,30 @@ CREATE INDEX idx_eksemplar_isbn ON eksemplar (ISBN);
 CREATE INDEX idx_utlan_isbn_eksnr ON utlån (ISBN, EksNr);
 CREATE INDEX idx_utlan_lnr ON utlån (LNr);
 CREATE INDEX idx_bok_forfatter ON bok (Forfatter);
+
+## Brukseksempler (Oppgave 4)
+
+Kjør fra prosjektkatalogen etter at du har opprettet databasen og satt inn testdata (Oppgave 1):
+
+```bash
+# Standard: vis alle bøker (argumentløst kjør)
+python oppgave4.py
+
+# Vis alle bøker (eksplisitt)
+python oppgave4.py vis-alle
+
+# Søk i tittel/forfatter (case-insensitiv)
+python oppgave4.py sok --tekst "Ibsen"
+
+# Registrer utlån (bruker dagens dato hvis --utlansdato utelates)
+python oppgave4.py registrer-utlan --lnr 3 --isbn 9000000000001 --eksnr 1 --utlansdato 2025-10-31
+
+# Lever bok (sett Levert=1)
+python oppgave4.py lever-bok --utlansnr 5
+
+# Lånerhistorikk (inkluderer navn og adresse)
+python oppgave4.py historikk --lnr 3
+
+# DB-parametre kan også oppgis via miljøvariabler:
+# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+```

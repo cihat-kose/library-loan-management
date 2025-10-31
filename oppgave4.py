@@ -4,7 +4,7 @@
 Oppgave 4 – Python + MySQL Connector (forbedret)
 
 Endringer (UX-forbedringer):
-1) Argumensløst kjør: viser nå automatisk alle bøker (standardhandling).
+1) Argumentløst kjør: viser nå automatisk alle bøker (standardhandling).
 2) register_utlan: verifiserer at LNr finnes før utlån opprettes.
 3) lever_bok: gir tydelig beskjed hvis utlånet allerede er levert.
 
@@ -251,17 +251,17 @@ def vis_historikk(conn, lnr: int):
           ORDER BY u.Utlånsdato DESC, u.UtlånsNr DESC \
           """
     cur = conn.cursor()
-    cur.execute("SELECT Fornavn, Etternavn FROM låner WHERE LNr = %s", (lnr,))
+    cur.execute("SELECT Fornavn, Etternavn, Adresse FROM låner WHERE LNr = %s", (lnr,))
     ln = cur.fetchone()
     if ln is None:
         print(f"Låner med LNr={lnr} finnes ikke.")
         cur.close()
         return
 
-    fornavn, etternavn = ln
+    fornavn, etternavn, adresse = ln
     cur.execute(sql, (lnr,))
     rows = cur.fetchall()
-    print(f"Låner: {fornavn} {etternavn} (LNr={lnr})")
+    print(f"Låner: {fornavn} {etternavn} (LNr={lnr}) – Adresse: {adresse}")
     _print_table(["UtlånsNr", "Tittel", "Forfatter", "Utlånsdato", "Status"], rows)
     cur.close()
 
