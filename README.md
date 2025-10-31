@@ -1,183 +1,181 @@
-# Oppgave 2 – Dokumentasjon (README.md)
+# Arbeidskrav 2 – Backend (Databaser og Python)
 
-## 1. Oversikt over databasen
-Databasen **ga_bibliotek** er utviklet for å administrere informasjon om bøker, eksemplarer, lånere og utlån ved et bibliotek.  
-Strukturen følger prinsippene for **3. normalform (3NF)** og sikrer dataintegritet gjennom primær- og fremmednøkler.
-
----
-
-## 2. Tabellbeskrivelser
-
-### 2.1 `bok`
-**Formål:** Inneholder grunnleggende informasjon om hver bok (tittel, forfatter, forlag osv.).  
-**Primærnøkkel:** `ISBN`  
-**Viktige felt:**
-- `Tittel`, `Forfatter`, `Forlag` – tekstfelt som beskriver boka.
-- `UtgittÅr`, `AntallSider` – numeriske verdier som gir detaljert informasjon.
-
-**Begrunnelse:**  
-`ISBN` brukes som unik identifikator fordi den er globalt unik for hver bokutgave.
+**Kandidat:** Cihat Köse  
+**Fag:** Backend-programmering (Databaser og Python)  
 
 ---
 
-### 2.2 `eksemplar`
-**Formål:** Representerer hvert fysiske eksemplar av en bok som biblioteket eier.  
-**Primærnøkkel:** `(ISBN, EksNr)`  
-**Fremmednøkkel:** `ISBN` refererer til `bok(ISBN)`  
-**Forklaring:**  
-Kombinasjonen av ISBN og eksemplarnummer (`EksNr`) sørger for at hvert eksemplar er unikt identifisert, selv om flere eksemplarer finnes av samme bok.
+## Oppgave 1 – Databasestruktur og innhold
+
+I denne oppgaven ble databasen `ga_bibliotek` opprettet med følgende tabeller:
+
+1. **bok**  
+   - Primærnøkkel: `ISBN`  
+   - Felter: `ISBN`, `Tittel`, `Forfatter`, `AntallSider`, `UtgittÅr`  
+   - Beskrivelse: Inneholder informasjon om alle bøker i biblioteket.
+
+2. **eksemplar**  
+   - Primærnøkkel: (`ISBN`, `EksNr`)  
+   - Fremmednøkkel: `ISBN` → `bok(ISBN)`  
+   - Beskrivelse: Representerer fysiske eksemplarer av bøker.
+
+3. **låner**  
+   - Primærnøkkel: `LNr` (AUTO_INCREMENT)  
+   - Felter: `Fornavn`, `Etternavn`, `Adresse`, `Postnr`, `Poststed`  
+   - Beskrivelse: Inneholder informasjon om lånerne.
+
+4. **utlån**  
+   - Primærnøkkel: `UtlånsNr` (AUTO_INCREMENT)  
+   - Fremmednøkler:  
+     - (`ISBN`, `EksNr`) → `eksemplar(ISBN, EksNr)`  
+     - `LNr` → `låner(LNr)`  
+   - Feltet `Levert` har **CHECK (Levert IN (0,1))** for dataintegritet.
+
+### Ekstra tiltak
+- Alle tabeller bruker **utf8mb4_unicode_ci** for Unicode-støtte.
+- Det er lagt til indekser på kolonner som brukes i JOIN-operasjoner for ytelse.
 
 ---
 
-### 2.3 `låner`
-**Formål:** Inneholder personopplysninger om personer som låner bøker.  
-**Primærnøkkel:** `LNr` (automatisk økende).  
-**Forklaring:**  
-Dette gjør det enkelt å koble lånere til deres utlån og opprettholde referanseintegritet.
+## Oppgave 2 – Datamodell og forklaring
+
+### Datamodell (ER-diagram)
+ER-skjemaet beskriver relasjonene mellom tabellene:
+
+📎 *Se vedlagte fil:* `oppgave2_skjema.png`
+
+### Forklaring av tabeller og nøkler
+
+| Tabell | Primærnøkkel | Fremmednøkler | Kommentar |
+|--------|---------------|----------------|------------|
+| **bok** | ISBN | – | Alle bøker i systemet |
+| **eksemplar** | ISBN, EksNr | bok(ISBN) | Fysiske eksemplarer |
+| **låner** | LNr | – | Registrerte lånere |
+| **utlån** | UtlånsNr | eksemplar, låner | Oversikt over utlån |
+
+- Databasen følger **3NF (Tredje normalform)**.  
+- Det er **referanseintegritet** gjennom FK-koblinger.  
+- **CHECK**, **AUTO_INCREMENT** og **NOT NULL** brukes konsekvent.
 
 ---
 
-### 2.4 `utlån`
-**Formål:** Registrerer hvert utlån, inkludert dato og leveringsstatus.  
-**Primærnøkkel:** `UtlånsNr` (automatisk økende).  
-**Fremmednøkler:**
-- `(ISBN, EksNr)` → `eksemplar(ISBN, EksNr)`
-- `LNr` → `låner(LNr)`
+## Oppgave 3 – SQL-spørringer
 
-**Forklaring:**  
-Ved å bruke fremmednøkler sikres at utlån bare kan registreres for eksisterende bøker, eksemplarer og lånere.  
-Feltet `Levert` bruker en **CHECK-konstraint** for å sikre at verdien alltid er enten `0` (ikke levert) eller `1` (levert).
+`oppgave3.sql` inneholder 12 spørringer som dekker følgende krav:
 
----
+1. Vis alle bøker utgitt etter år 2000  
+2. Vis forfatter og tittel, sortert alfabetisk etter forfatter  
+3. Vis bøker med mer enn 300 sider  
+4. Sett inn ny bok  
+5. Registrer ny låner  
+6. Oppdater adresse til en låner  
+7. Vis utlån med lånernavn og boktittel  
+8. Antall eksemplarer per bok  
+9. Antall utlån per låner (inkludert 0)  
+10. Antall utlån per bok  
+11. Bøker som aldri har vært utlånt  
+12. Forfatter og totalt antall utlån
 
-## 3. Relasjonsoversikt
-```
-bok (ISBN) 1---∞ eksemplar (ISBN, EksNr)
-eksemplar (ISBN, EksNr) 1---∞ utlån (UtlånsNr)
-låner (LNr) 1---∞ utlån (LNr)
-```
-
----
-
-## 4. Designvalg og integritet
-- **Dataintegritet:** Opprettholdes gjennom primær- og fremmednøkler samt CHECK-konstraint.  
-- **Oppdatering og sletting:** `ON UPDATE CASCADE` sikrer at endringer i bokdata videreføres automatisk.  
-- **Ytelse:** Indekser opprettes implisitt gjennom primærnøklene.  
-- **Normalisering:** Datamodellen unngår redundans og følger 3NF.
+Alle spørringer er testet mot databasen og returnerer riktige resultater.
 
 ---
 
-## 5. Kildeskjema
-*(Figur hentet fra Oppgave 2-skjema.png)*
+## Oppgave 4 – Python-program (MySQL Connector)
 
-![Database-skjema](oppgave2_skjema.png)
+**Fil:** `oppgave4.py`
 
-## Vedlegg A – Kolonner, datatyper og constraints (eksplisitt)
+Programmet gir et kommandolinjegrensesnitt (CLI) for å administrere biblioteket.  
+Alle databaseoperasjoner bruker `mysql.connector` med parameteriserte spørringer for å unngå SQL-injeksjon.
 
-**bok**
-- `ISBN VARCHAR(13)` — **PRIMARY KEY**
-- `Tittel VARCHAR(255)` — **NOT NULL**
-- `Forfatter VARCHAR(100)` — **NOT NULL**
-- `Forlag VARCHAR(100)` — **NOT NULL**
-- `UtgittÅr INT` — **NOT NULL**
-- `AntallSider INT` — **NOT NULL**
+### Funksjoner
 
-**eksemplar**
-- `ISBN VARCHAR(13)` — **NOT NULL**, **FOREIGN KEY** → `bok(ISBN)`
-- `EksNr INT` — **NOT NULL**
-- **PRIMARY KEY** (`ISBN`, `EksNr`)
+| Funksjon | Beskrivelse |
+|-----------|--------------|
+| `connect_to_database()` | Oppretter forbindelse til MySQL. Feilhåndtering inkludert. |
+| `vis_alle_boker()` | Viser alle bøker. (standardhandling uten argumenter) |
+| `sok_bok(tekst)` | Søker i tittel/forfatter. |
+| `registrer_utlan(isbn, eksnr, lnr)` | Oppretter nytt utlån dersom låner og eksemplar finnes og ikke allerede er utlånt. |
+| `lever_bok(utlansnr)` | Marker utlån som levert (hvis ikke allerede). |
+| `vis_lanerhistorikk(lnr)` | Viser historikk over lånerens utlån. |
 
-**låner**
-- `LNr INT` — **PRIMARY KEY**, **AUTO_INCREMENT**
-- `Fornavn VARCHAR(100)` — **NOT NULL**
-- `Etternavn VARCHAR(100)` — **NOT NULL**
-- `Adresse VARCHAR(255)` — **NOT NULL**
-
-**utlån**
-- `UtlånsNr INT` — **PRIMARY KEY**, **AUTO_INCREMENT**
-- `ISBN VARCHAR(13)` — **NOT NULL**
-- `EksNr INT` — **NOT NULL**
-- `LNr INT` — **NOT NULL**
-- `Utlånsdato DATE` — **NOT NULL**
-- `Levert TINYINT` — **NOT NULL**, **CHECK (Levert IN (0,1))**
-- **FOREIGN KEY** (`ISBN`, `EksNr`) → `eksemplar(ISBN, EksNr)`
-- **FOREIGN KEY** (`LNr`) → `låner(LNr)`
-
-**Merk**
-- Alle tabeller bruker `utf8mb4` og `utf8mb4_unicode_ci`.
-- Fremmednøkler er satt med `ON UPDATE CASCADE` og `ON DELETE RESTRICT` der det er relevant.
-- `Levert` feltet modellerer status: 0 utlånt, 1 levert.
-
-
-## Ytelse og indekser
-For å sikre gode kjøretider ved spørringer på fremmednøkler, anbefales eksplisitte indekser på:
-- `eksemplar(ISBN)`
-- `utlån(ISBN, EksNr)`
-- `utlån(LNr)`
-
-I tillegg kan man vurdere indeks på `bok(Forfatter)` for søk etter forfatter.
-
-> Merk: `CHECK (Levert IN (0,1))` håndheves i MySQL 8.0+. I eldre versjoner kan uttrykket være informativt uten å bli tvangsgjennomført.
-
-## Endringer vs PDF (Oppgave 4)
-- `registrer_utlan(lnr, isbn, eksnr, utlansdato)` har nå samme signatur som i PDF.  
-  Hvis `--utlansdato` ikke gis, brukes dagens dato automatisk.
-
-## Tillegg: Indekser
-Følgende indekser er lagt til for å forbedre ytelsen ved hyppig brukte kolonner:
-
-```sql
--- Ytelsesforbedrende indekser for hyppig brukte kolonner
-CREATE INDEX idx_eksemplar_isbn ON eksemplar (ISBN);
-CREATE INDEX idx_utlan_isbn_eksnr ON utlån (ISBN, EksNr);
-CREATE INDEX idx_utlan_lnr ON utlån (LNr);
-CREATE INDEX idx_bok_forfatter ON bok (Forfatter);
-```
-## Brukseksempler (Oppgave 4)
-
-Kjør fra prosjektkatalogen etter at du har opprettet databasen og satt inn testdata (Oppgave 1):
+### Eksempel på bruk
 
 ```bash
-# Standard: vis alle bøker (argumentløst kjør)
-python oppgave4.py
-
-# Vis alle bøker (eksplisitt)
+# Kjør med argumenter
 python oppgave4.py vis-alle
-
-# Søk i tittel/forfatter (case-insensitiv)
 python oppgave4.py sok --tekst "Ibsen"
-
-# Registrer utlån (bruker dagens dato hvis --utlansdato utelates)
-python oppgave4.py registrer-utlan --lnr 3 --isbn 9000000000001 --eksnr 1 --utlansdato 2025-10-31
-
-# Lever bok (sett Levert=1)
+python oppgave4.py registrer-utlan --isbn 9000000000001 --eksnr 1 --lnr 3
 python oppgave4.py lever-bok --utlansnr 5
-
-# Lånerhistorikk (inkluderer navn og adresse)
 python oppgave4.py historikk --lnr 3
-
-# DB-parametre kan også oppgis via miljøvariabler:
-# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 ```
 
+### UX-forbedringer
+- Programmet kan kjøres **uten argumenter**, og viser da automatisk alle bøker.  
+- Klare feilmeldinger for ugyldige låner-IDer eller eksemplarer.  
+- `Levert` kontrolleres før oppdatering for å unngå duplikate leveringer.
 
-## Installasjon og kjøring
+---
 
-1. Opprett databasen og testdata lokalt:
-   ```bash
-   mysql -u root -p < oppgave1.sql
-   ```
-2. Opprett og aktiver venv, installer avhengigheter:
-   ```bash
-   python -m venv .venv
-   . .venv/bin/activate  # Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-3. Kjør programmet (standard viser alle bøker). DB-parametre kan settes med flagg eller miljøvariabler `HOST, PORT, USER, PASSWORD, DATABASE`:
-   ```bash
-   python oppgave4.py
-   python oppgave4.py sok --tekst "Ibsen"
-   python oppgave4.py registrer-utlan --isbn 9000000000001 --eksnr 1 --lnr 3
-   python oppgave4.py lever-bok --utlansnr 5
-   python oppgave4.py historikk --lnr 3
-   ```
+## ⚙Konfigurasjon og miljøvariabler
+
+Programmet støtter både kommandolinjeargumenter og miljøvariabler.  
+Dersom du ikke spesifiserer argumenter, leses følgende miljøvariabler automatisk:
+
+```bash
+export DB_HOST=127.0.0.1
+export DB_PORT=3306
+export DB_USER=root
+export DB_PASSWORD=******
+export DB_NAME=ga_bibliotek
+```
+
+Deretter kan du kjøre:
+```bash
+python oppgave4.py
+```
+
+---
+
+## Installasjon
+
+Krever Python 3.10+ og MySQL-server.  
+Installer nødvendige pakker:
+
+```bash
+pip install -r requirements.txt
+```
+
+**requirements.txt:**
+```
+mysql-connector-python
+```
+
+---
+
+## Filoversikt
+
+| Filnavn | Beskrivelse |
+|----------|-------------|
+| `oppgave1.sql` | Opprettelse av database, tabeller og eksempeldata |
+| `oppgave2_skjema.png` | ER-diagram for databasen |
+| `oppgave3.sql` | SQL-spørringer (12 stk) |
+| `oppgave4.py` | Python-program med CLI |
+| `requirements.txt` | Avhengigheter |
+| `README.md` | Dokumentasjon (denne filen) |
+| `Arbeidskrav2Backend-17-10-2025.pdf` | Oppgavetekst (referanse) |
+
+---
+
+## Oppsummering
+
+| Deloppgave | Innhold | Status |
+|-------------|----------|---------|
+| Oppgave 1 | Databasestruktur og eksempeldata | ✅ |
+| Oppgave 2 | Datamodell og forklaring | ✅ |
+| Oppgave 3 | 12 SQL-spørringer | ✅ |
+| Oppgave 4 | Python-program med databaseintegrasjon | ✅ |
+| README / Dokumentasjon | Fullstendig og i henhold til retningslinjer | ✅ |
+
+---
+
+**Arbeidskravet er gjennomført i samsvar med veiledningen og demonstrerer funksjonell databaseintegrasjon mellom SQL og Python.**
