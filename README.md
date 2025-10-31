@@ -119,3 +119,16 @@ I tillegg kan man vurdere indeks på `bok(Forfatter)` for søk etter forfatter.
 
 > Merk: `CHECK (Levert IN (0,1))` håndheves i MySQL 8.0+. I eldre versjoner kan uttrykket være informativt uten å bli tvangsgjennomført.
 
+## Endringer vs PDF (Oppgave 4)
+- `registrer_utlan(lnr, isbn, eksnr, utlansdato)` har nå samme signatur som i PDF.  
+  Hvis `--utlansdato` ikke gis, brukes dagens dato automatisk.
+
+## Tillegg: Indekser
+Følgende indekser er lagt til for å forbedre ytelsen ved hyppig brukte kolonner:
+
+```sql
+-- Ytelsesforbedrende indekser for hyppig brukte kolonner
+CREATE INDEX idx_eksemplar_isbn ON eksemplar (ISBN);
+CREATE INDEX idx_utlan_isbn_eksnr ON utlån (ISBN, EksNr);
+CREATE INDEX idx_utlan_lnr ON utlån (LNr);
+CREATE INDEX idx_bok_forfatter ON bok (Forfatter);

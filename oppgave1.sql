@@ -98,3 +98,9 @@ VALUES ('Vincent', 'van Gogh', 'Zundert'),
 -- Registrerer ett eksempelutlån (ikke levert ennå)
 INSERT INTO `utlån` (`ISBN`, `EksNr`, `LNr`, `Utlånsdato`, `Levert`)
 VALUES ('9788205342291', 1, 2, '2025-10-29', 0);
+
+-- Ytelsesforbedrende indekser for hyppig brukte kolonner
+CREATE INDEX idx_eksemplar_isbn ON eksemplar (ISBN);
+CREATE INDEX idx_utlan_isbn_eksnr ON utlån (ISBN, EksNr);
+CREATE INDEX idx_utlan_lnr ON utlån (LNr);
+CREATE INDEX idx_bok_forfatter ON bok (Forfatter);

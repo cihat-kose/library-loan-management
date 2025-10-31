@@ -16,12 +16,13 @@ Bruk:
   python oppgave4.py lever-bok --utlansnr 5
   python oppgave4.py historikk --lnr 3
 
-Miljøvariabler støttes også: HOST, PORT, USER, PASSWORD, DATABASE
+Miljøvariabler støttes også: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 """
 
+import argparse
+import datetime
 import os
 import sys
-import argparse
 from typing import List, Tuple
 
 try:
@@ -59,12 +60,11 @@ def _print_table(headers: List[str], rows: List[Tuple]):
 def get_db_args():
     """Bygger felles DB-argumenter fra CLI og miljøvariabler."""
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("--host", default=os.getenv("HOST", "127.0.0.1"))
-    parser.add_argument("--port", type=int, default=int(os.getenv("PORT", 3306)))
-    parser.add_argument("--user", default=os.getenv("USER", "root"))
-    parser.add_argument("--password", default=os.getenv("PASSWORD", ""))
-    parser.add_argument("--database", default=os.getenv("DATABASE", "ga_bibliotek"))
-    # NB: dette parser bare DB-arg; subparsers lages i main()
+    parser.add_argument("--host", default=os.getenv("DB_HOST", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=int(os.getenv("DB_PORT", 3306)))
+    parser.add_argument("--user", default=os.getenv("DB_USER", "root"))
+    parser.add_argument("--password", default=os.getenv("DB_PASSWORD", ".MySQL01,"))
+    parser.add_argument("--database", default=os.getenv("DB_NAME", "ga_bibliotek"))
     return parser
 
 
@@ -88,10 +88,10 @@ def connect_to_database(ns) -> mysql.connector.MySQLConnection:
 def vis_alle_boker(conn):
     """Lister alle bøker med sentrale felt."""
     sql = """
-        SELECT ISBN, Tittel, Forfatter, Forlag, UtgittÅr, AntallSider
-        FROM bok
-        ORDER BY Tittel ASC
-    """
+          SELECT ISBN, Tittel, Forfatter, Forlag, UtgittÅr, AntallSider
+          FROM bok
+          ORDER BY Tittel ASC \
+          """
     cur = conn.cursor()
     cur.execute(sql)
     rows = cur.fetchall()
@@ -103,11 +103,12 @@ def sok_bok(conn, tekst: str):
     """Søk i tittel eller forfatter (case-insensitive pga kollasjon)."""
     pattern = f"%{tekst}%"
     sql = """
-        SELECT ISBN, Tittel, Forfatter, UtgittÅr
-        FROM bok
-        WHERE Tittel LIKE %s OR Forfatter LIKE %s
-        ORDER BY Forfatter, Tittel
-    """
+          SELECT ISBN, Tittel, Forfatter, UtgittÅr
+          FROM bok
+          WHERE Tittel LIKE %s
+             OR Forfatter LIKE %s
+          ORDER BY Forfatter, Tittel \
+          """
     cur = conn.cursor()
     cur.execute(sql, (pattern, pattern))
     rows = cur.fetchall()
@@ -123,7 +124,7 @@ def _eksisterer_laner(conn, lnr: int) -> bool:
     return ok
 
 
-def registrer_utlan(conn, isbn: str, eksnr: int, lnr: int):
+def registrer_utlan(conn, lnr: int, isbn: str, eksnr: int, utlansdato: str | None = None):
     """
     Oppretter et nytt utlån dersom:
       - Låner finnes
@@ -154,7 +155,9 @@ def registrer_utlan(conn, isbn: str, eksnr: int, lnr: int):
             """
             SELECT u.UtlånsNr
             FROM utlån u
-            WHERE u.ISBN = %s AND u.EksNr = %s AND u.Levert = 0
+            WHERE u.ISBN = %s
+              AND u.EksNr = %s
+              AND u.Levert = 0
             """,
             (isbn, eksnr),
         )
@@ -163,14 +166,32 @@ def registrer_utlan(conn, isbn: str, eksnr: int, lnr: int):
             cur.close()
             return
 
-        # 4) Opprett utlån (Utlånsdato = dagens dato via NOW())
-        cur.execute(
-            """
-            INSERT INTO utlån (ISBN, EksNr, LNr, Utlånsdato, Levert)
-            VALUES (%s, %s, %s, CURDATE(), 0)
-            """,
-            (isbn, eksnr, lnr),
-        )
+        # 4) Opprett utlån
+        #   - Hvis utlansdato er oppgitt, bruk den (YYYY-MM-DD valideres)
+        #   - Ellers bruk dagens dato via CURDATE()
+        if utlansdato:
+            # enkel validering av formatet
+            try:
+                datetime.date.fromisoformat(utlansdato)
+            except Exception:
+                print("Ugyldig datoformat for --utlansdato. Bruk YYYY-MM-DD.")
+                cur.close()
+                return
+            cur.execute(
+                """
+                INSERT INTO utlån (ISBN, EksNr, LNr, Utlånsdato, Levert)
+                VALUES (%s, %s, %s, %s, 0)
+                """,
+                (isbn, eksnr, lnr, utlansdato),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO utlån (ISBN, EksNr, LNr, Utlånsdato, Levert)
+                VALUES (%s, %s, %s, CURDATE(), 0)
+                """,
+                (isbn, eksnr, lnr),
+            )
         conn.commit()
         print("Utlån opprettet.")
         cur.close()
@@ -218,18 +239,17 @@ def vis_historikk(conn, lnr: int):
     Viser alle utlån for en låner, med bokinfo og status.
     """
     sql = """
-        SELECT
-            u.UtlånsNr,
-            b.Tittel,
-            b.Forfatter,
-            u.Utlånsdato,
-            CASE WHEN u.Levert = 1 THEN 'Levert' ELSE 'Utlånt' END AS Status
-        FROM utlån u
-        JOIN eksemplar e ON (u.ISBN = e.ISBN AND u.EksNr = e.EksNr)
-        JOIN bok b ON b.ISBN = u.ISBN
-        WHERE u.LNr = %s
-        ORDER BY u.Utlånsdato DESC, u.UtlånsNr DESC
-    """
+          SELECT u.UtlånsNr,
+                 b.Tittel,
+                 b.Forfatter,
+                 u.Utlånsdato,
+                 CASE WHEN u.Levert = 1 THEN 'Levert' ELSE 'Utlånt' END AS Status
+          FROM utlån u
+                   JOIN eksemplar e ON (u.ISBN = e.ISBN AND u.EksNr = e.EksNr)
+                   JOIN bok b ON b.ISBN = u.ISBN
+          WHERE u.LNr = %s
+          ORDER BY u.Utlånsdato DESC, u.UtlånsNr DESC \
+          """
     cur = conn.cursor()
     cur.execute("SELECT Fornavn, Etternavn FROM låner WHERE LNr = %s", (lnr,))
     ln = cur.fetchone()
@@ -270,10 +290,11 @@ def build_parser():
 
     # registrer utlån
     p3 = sub.add_parser("registrer-utlan", help="Registrer nytt utlån", parents=[db_parent])
+    p3.add_argument("--lnr", type=int, required=True, help="Lånernummer")
     p3.add_argument("--isbn", required=True)
     p3.add_argument("--eksnr", type=int, required=True)
-    p3.add_argument("--lnr", type=int, required=True)
-    p3.set_defaults(func=lambda ns: registrer_utlan(connect_to_database(ns), ns.isbn, ns.eksnr, ns.lnr))
+    p3.add_argument("--utlansdato", required=False, help="YYYY-MM-DD; hvis utelatt brukes dagens dato")
+    p3.set_defaults(func=lambda ns: registrer_utlan(connect_to_database(ns), ns.lnr, ns.isbn, ns.eksnr, ns.utlansdato))
 
     # lever bok
     p4 = sub.add_parser("lever-bok", help="Registrer levering av bok", parents=[db_parent])
