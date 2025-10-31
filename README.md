@@ -132,7 +132,7 @@ CREATE INDEX idx_eksemplar_isbn ON eksemplar (ISBN);
 CREATE INDEX idx_utlan_isbn_eksnr ON utlån (ISBN, EksNr);
 CREATE INDEX idx_utlan_lnr ON utlån (LNr);
 CREATE INDEX idx_bok_forfatter ON bok (Forfatter);
-
+```
 ## Brukseksempler (Oppgave 4)
 
 Kjør fra prosjektkatalogen etter at du har opprettet databasen og satt inn testdata (Oppgave 1):
@@ -159,3 +159,25 @@ python oppgave4.py historikk --lnr 3
 # DB-parametre kan også oppgis via miljøvariabler:
 # DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
 ```
+
+
+## Installasjon og kjøring
+
+1. Opprett databasen og testdata lokalt:
+   ```bash
+   mysql -u root -p < oppgave1.sql
+   ```
+2. Opprett og aktiver venv, installer avhengigheter:
+   ```bash
+   python -m venv .venv
+   . .venv/bin/activate  # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+3. Kjør programmet (standard viser alle bøker). DB-parametre kan settes med flagg eller miljøvariabler `HOST, PORT, USER, PASSWORD, DATABASE`:
+   ```bash
+   python oppgave4.py
+   python oppgave4.py sok --tekst "Ibsen"
+   python oppgave4.py registrer-utlan --isbn 9000000000001 --eksnr 1 --lnr 3
+   python oppgave4.py lever-bok --utlansnr 5
+   python oppgave4.py historikk --lnr 3
+   ```
