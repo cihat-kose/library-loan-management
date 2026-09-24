@@ -1,6 +1,6 @@
 # Library Loan Management
 
-[![Tests](https://github.com/cihat-kose/library-loan-management/actions/workflows/tests.yml/badge.svg)](https://github.com/cihat-kose/library-loan-management/actions/workflows/tests.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/cihat-kose/library-loan-management/tests.yml?style=for-the-badge&label=CI%20Tests&logo=github)](https://github.com/cihat-kose/library-loan-management/actions/workflows/tests.yml)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![CLI](https://img.shields.io/badge/Interface-CLI-222222?style=for-the-badge&logo=gnubash&logoColor=white)](https://docs.python.org/3/library/argparse.html)
