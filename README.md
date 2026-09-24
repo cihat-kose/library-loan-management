@@ -1,6 +1,6 @@
-# Library Loans CLI
+# Library Loan Management
 
-A small Python and MySQL command-line application for browsing a library catalogue and tracking loans of physical book copies. It grew out of a backend database assignment and is presented here as a software quality portfolio project, with explicit validation, transaction handling and automated checks.
+A small Python and MySQL command-line application for browsing a library catalogue and managing loans of physical book copies. It is presented as the **Library Loan Management** project, with explicit validation, transaction handling and automated checks.
 
 ## Features
 
@@ -8,6 +8,7 @@ A small Python and MySQL command-line application for browsing a library catalog
 - Borrow an existing copy for an existing borrower.
 - Reject loans for unavailable copies, and reject missing or repeated returns.
 - Display a borrower's loan history.
+- Use a numbered interactive menu from PyCharm or the command line.
 - Use parameterized SQL and close connections after each command.
 
 This is a local demonstration, without authentication, a web interface, borrower management or due-date tracking. Search uses MySQL `LIKE`: `%` and `_` retain their wildcard meaning.
@@ -100,6 +101,21 @@ python -m library_loans return --loan 2
 
 The example ID is only valid if that loan exists. Borrow optionally accepts `--date 2025-10-29`; otherwise it uses today's date on the client machine. Commands return status `0` on success, `1` for database or lending errors, and `2` for invalid arguments. Omitting a subcommand lists the catalogue.
 
+## Run from PyCharm
+
+The shared **Library Loan Management (interactive)** Run Configuration starts
+`python -m library_loans interactive` with the project directory as its working
+directory. Select it in the configuration dropdown and press the green Run
+button to open the numbered menu.
+
+Before the first run, start MySQL with `docker compose up -d --wait` as
+described above. In PyCharm, open **Run | Edit Configurations**, select the
+shared configuration, and add `DB_PASSWORD` under **Environment variables**
+using the same local password as `.env`. Keep the value in PyCharm's local
+configuration and do not add it to the shared XML or source control. Add
+`DB_HOST`, `DB_PORT`, `DB_USER`, or `DB_NAME` there only when your local
+database differs from the defaults.
+
 ## Tests and quality focus
 
 No database is needed for the default test command:
@@ -148,6 +164,6 @@ The original README is a historical document; its feature and test claims are no
 
 ## Changes from the assignment version
 
-The entry point changed from `oppgave4.py` to `python -m library_loans`. Commands are now `list`, `search`, `borrow`, `return` and `history`, with English option names. The default database is now `library_loans`; use `DB_NAME=ga_bibliotek` for an existing original database. No existing database is migrated automatically.
+The entry point changed from `oppgave4.py` to `python -m library_loans`. Commands are now `list`, `search`, `borrow`, `return`, `history` and `interactive`, with English option names. The default database is now `library_loans`; use `DB_NAME=ga_bibliotek` for an existing original database. No existing database is migrated automatically.
 
 The hard-coded password was removed. Invalid operations now return a failure status, unknown arguments are rejected, database flags no longer bypass the requested command, and each invocation closes its connection. Loans use locking reads to prevent concurrent borrowing through the CLI. The default loan date now comes from the client clock instead of the database clock. The SQL example for never-borrowed books now checks all copies correctly.

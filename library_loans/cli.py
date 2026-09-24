@@ -31,7 +31,7 @@ def iso_date(value):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="Library Loans CLI (MySQL)")
+    parser = argparse.ArgumentParser(description="Library Loan Management (MySQL)")
 
     def database_options(target, suppress=False):
         for name, default in (("host", "127.0.0.1"), ("port", "3306"),
@@ -50,7 +50,8 @@ def build_parser():
                             ("search", "Search titles and authors"),
                             ("borrow", "Register a loan"),
                             ("return", "Return a loan"),
-                            ("history", "Show a borrower's loan history")):
+                            ("history", "Show a borrower's loan history"),
+                            ("interactive", "Open the numbered interactive menu")):
         sub = commands.add_parser(name, help=help_text)
         database_options(sub, suppress=True)
         if name == "search":
@@ -64,6 +65,25 @@ def build_parser():
         if name == "return":
             sub.add_argument("--loan", type=positive_integer, required=True)
     return parser
+
+
+def _prompt_positive_integer(prompt, input_fn=input, output_fn=print):
+    while True:
+        try:
+            return positive_integer(input_fn(prompt))
+        except argparse.ArgumentTypeError as exc:
+            output_fn(f"Invalid input: {exc}")
+
+
+def _prompt_date(prompt, input_fn=input, output_fn=print):
+    while True:
+        value = input_fn(prompt).strip()
+        if not value:
+            return None
+        try:
+            return iso_date(value)
+        except argparse.ArgumentTypeError as exc:
+            output_fn(f"Invalid input: {exc}")
 
 
 def print_table(headers, rows):
@@ -87,6 +107,8 @@ def run(conn, args):
     elif args.command == "return":
         service.return_book(conn, args.loan)
         return f"Loan {args.loan} returned."
+    elif args.command == "interactive":
+        return interactive(conn)
     else:
         print_table(["Loan", "Title", "Author", "Date", "Status"],
                     service.loan_history(conn, args.borrower))
@@ -113,3 +135,66 @@ def main(argv=None):
     finally:
         if conn is not None:
             conn.close()
+
+
+def interactive(conn, input_fn=input, output_fn=print):
+    """Run the numbered menu while reusing the existing service operations."""
+    while True:
+        output_fn("\nLibrary Loan Management")
+        output_fn("1. List books")
+        output_fn("2. Search books")
+        output_fn("3. Borrow a book")
+        output_fn("4. Return a loan")
+        output_fn("5. Loan history")
+        output_fn("6. Exit")
+        choice = input_fn("Choose an option: ").strip()
+
+        try:
+            if choice == "1":
+                print_table(
+                    ["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
+                    service.list_books(conn),
+                )
+            elif choice == "2":
+                text = input_fn("Search text: ").strip()
+                print_table(
+                    ["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
+                    service.search_books(conn, text),
+                )
+            elif choice == "3":
+                borrower = _prompt_positive_integer(
+                    "Borrower ID: ", input_fn, output_fn
+                )
+                isbn = input_fn("ISBN: ").strip()
+                copy_number = _prompt_positive_integer(
+                    "Copy number: ", input_fn, output_fn
+                )
+                loan_date = _prompt_date(
+                    "Loan date (YYYY-MM-DD, blank for today): ", input_fn, output_fn
+                )
+                loan_id = service.borrow_book(
+                    conn, borrower, isbn, copy_number, loan_date
+                )
+                output_fn(f"Loan created: {loan_id}")
+            elif choice == "4":
+                loan_id = _prompt_positive_integer("Loan ID: ", input_fn, output_fn)
+                service.return_book(conn, loan_id)
+                output_fn(f"Loan {loan_id} returned.")
+            elif choice == "5":
+                borrower = _prompt_positive_integer(
+                    "Borrower ID: ", input_fn, output_fn
+                )
+                print_table(
+                    ["Loan", "Title", "Author", "Date", "Status"],
+                    service.loan_history(conn, borrower),
+                )
+            elif choice == "6":
+                output_fn("Goodbye.")
+                return 0
+            else:
+                output_fn("Invalid option. Choose a number from 1 to 6.")
+                continue
+            conn.commit()
+        except (mysql.connector.Error, service.LoanError) as exc:
+            conn.rollback()
+            output_fn(f"Error: {exc}")

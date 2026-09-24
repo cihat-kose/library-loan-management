@@ -1,4 +1,9 @@
 .idea/
+!.idea/
+.idea/*
+!.idea/runConfigurations/
+.idea/runConfigurations/*
+!.idea/runConfigurations/library-loan-management-interactive.xml
 .venv/
 __pycache__/
 *.py[cod]

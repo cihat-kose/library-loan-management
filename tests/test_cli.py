@@ -11,6 +11,10 @@ from library_loans import cli, service
 
 
 class ParserTests(unittest.TestCase):
+    def test_interactive_is_a_command(self):
+        args = cli.build_parser().parse_args(["interactive"])
+        self.assertEqual(args.command, "interactive")
+
     def test_options_on_either_side_keep_selected_command(self):
         for argv in (["--host", "db", "search", "--text", "Ibsen"],
                      ["search", "--text", "Ibsen", "--host", "db"]):
@@ -44,6 +48,7 @@ class TransactionTests(unittest.TestCase):
         conn.close.assert_called_once()
         conn.cursor.return_value.close.assert_called_once()
 
+
     @patch.object(cli.mysql.connector, "connect")
     def test_database_failure_rolls_back_and_closes(self, connect):
         conn = connect.return_value
@@ -65,6 +70,35 @@ class TransactionTests(unittest.TestCase):
         conn.rollback.assert_called_once()
         conn.commit.assert_not_called()
         conn.close.assert_called_once()
+
+
+class InteractiveTests(unittest.TestCase):
+    def test_menu_handles_invalid_choice_and_exits(self):
+        conn = MagicMock()
+        output = io.StringIO()
+        inputs = iter(["invalid", "6"])
+        cli.interactive(conn, input_fn=lambda _: next(inputs), output_fn=lambda text: print(text, file=output))
+        self.assertIn("Invalid option", output.getvalue())
+        self.assertIn("Goodbye.", output.getvalue())
+        conn.commit.assert_not_called()
+
+    @patch.object(cli.service, "search_books", return_value=[])
+    def test_menu_searches_and_commits(self, search_books):
+        conn = MagicMock()
+        inputs = iter(["2", "Ibsen", "6"])
+        cli.interactive(conn, input_fn=lambda _: next(inputs))
+        search_books.assert_called_once_with(conn, "Ibsen")
+        conn.commit.assert_called_once()
+
+    @patch.object(cli.service, "borrow_book", return_value=12)
+    def test_menu_reprompts_invalid_borrower_and_borrows(self, borrow_book):
+        conn = MagicMock()
+        output = io.StringIO()
+        inputs = iter(["3", "zero", "3", "9000000000001", "1", "", "6"])
+        cli.interactive(conn, input_fn=lambda _: next(inputs), output_fn=lambda text: print(text, file=output))
+        self.assertIn("Invalid input", output.getvalue())
+        borrow_book.assert_called_once_with(conn, 3, "9000000000001", 1, None)
+        self.assertEqual(conn.commit.call_count, 1)
 
 
 class LendingTests(unittest.TestCase):
