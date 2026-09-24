@@ -35,7 +35,7 @@ def build_parser():
 
     def database_options(target, suppress=False):
         for name, default in (("host", "127.0.0.1"), ("port", "3306"),
-                              ("user", "library_app"), ("password", ""),
+                              ("user", "library_app"), ("password", "library-app-local"),
                               ("database", "library_loans")):
             env_name = "DB_NAME" if name == "database" else f"DB_{name.upper()}"
             target.add_argument(

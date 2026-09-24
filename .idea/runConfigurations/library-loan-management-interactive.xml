@@ -2,7 +2,9 @@
   <configuration default="false" type="PythonConfigurationType" factoryName="Python" name="Library Loan Management (interactive)">
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
-    <envs />
+    <envs>
+      <env name="DB_PASSWORD" value="library-app-local" />
+    </envs>
     <option name="SDK_HOME" value="$PROJECT_DIR$/.venv/Scripts/python.exe" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="IS_MODULE_SDK" value="false" />

@@ -50,32 +50,20 @@ If PowerShell blocks activation, use `.venv\Scripts\python` in place of `python`
 
 ## Start the demo database
 
-Copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell or `cp .env.example .env` in a POSIX shell). Replace both placeholder passwords with local demo credentials, then run:
+Docker Compose is preconfigured with local demo passwords, so no `.env` file is required. From the repository root, run:
 
 ```text
 docker compose up -d --wait
 ```
 
-Compose creates the schema and demonstration data on the first start with an empty volume. It binds MySQL to localhost on port 3306. If that port is occupied, change the host port in `compose.yaml` and set `DB_PORT` accordingly.
-
-The Python CLI reads environment variables, **not** the `.env` file. Set `DB_PASSWORD` in your terminal to the same value used in `.env`:
-
-```powershell
-$env:DB_PASSWORD = 'your-local-demo-password'
-```
-
-Or in a POSIX shell:
-
-```sh
-export DB_PASSWORD='your-local-demo-password'
-```
+Compose creates the schema and demonstration data on the first start with an empty volume. It binds MySQL to localhost on port 3306. The CLI and the shared PyCharm Run configuration use the same local demo password automatically. If that port is occupied, change the host port in `compose.yaml` and set `DB_PORT` in the Run configuration or environment accordingly.
 
 | Variable | Default |
 | --- | --- |
 | `DB_HOST` | `127.0.0.1` |
 | `DB_PORT` | `3306` |
 | `DB_USER` | `library_app` |
-| `DB_PASSWORD` | Empty; configure before connecting |
+| `DB_PASSWORD` | `library-app-local` |
 | `DB_NAME` | `library_loans` |
 
 Connection options (`--host`, `--port`, `--user`, `--password`, `--database`) can appear before or after a subcommand. Prefer the environment for passwords to keep them out of command arguments.
@@ -109,12 +97,10 @@ directory. Select it in the configuration dropdown and press the green Run
 button to open the numbered menu.
 
 Before the first run, start MySQL with `docker compose up -d --wait` as
-described above. In PyCharm, open **Run | Edit Configurations**, select the
-shared configuration, and add `DB_PASSWORD` under **Environment variables**
-using the same local password as `.env`. Keep the value in PyCharm's local
-configuration and do not add it to the shared XML or source control. Add
-`DB_HOST`, `DB_PORT`, `DB_USER`, or `DB_NAME` there only when your local
-database differs from the defaults.
+described above. Then select **Library Loan Management (interactive)** in the
+Run dropdown and press the green Run button. The shared configuration already
+contains the local demo password. Add `DB_HOST`, `DB_PORT`, `DB_USER`, or
+`DB_NAME` there only when your local database differs from the defaults.
 
 ## Tests and quality focus
 
