@@ -1,0 +1,65 @@
+name: Tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ['3.10', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install -r requirements.txt
+      - run: python -m unittest discover -s tests -v
+      - run: python -m library_loans --help
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-only
+          MYSQL_DATABASE: library_loans
+          MYSQL_USER: library_app
+          MYSQL_PASSWORD: ci-app-only
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      DB_HOST: 127.0.0.1
+      DB_USER: library_app
+      DB_PASSWORD: ci-app-only
+      DB_NAME: library_loans
+      RUN_MYSQL_TESTS: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r requirements.txt
+      - name: Initialize schema and demonstration data
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          import mysql.connector
+          conn = mysql.connector.connect(host=os.environ['DB_HOST'], user=os.environ['DB_USER'], password=os.environ['DB_PASSWORD'], database=os.environ['DB_NAME'])
+          with conn.cursor() as cursor:
+              for name in ('schema', 'seed'):
+                  sql = Path(f'sql/{name}.sql').read_text(encoding='utf-8')
+                  sql = '\n'.join(line for line in sql.splitlines() if not line.lstrip().startswith('--'))
+                  for statement in sql.split(';'):
+                      if statement.strip():
+                          cursor.execute(statement)
+          conn.commit()
+          conn.close()
+          PY
+      - run: python -m unittest discover -s tests -v
+      - run: python -m library_loans search --text Ibsen

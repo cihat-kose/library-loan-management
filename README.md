@@ -1,181 +1,153 @@
-# Arbeidskrav 2 – Backend (Databaser og Python)
+# Library Loans CLI
 
-**Kandidat:** Cihat Köse  
-**Fag:** Backend-programmering (Databaser og Python)  
+A small Python and MySQL command-line application for browsing a library catalogue and tracking loans of physical book copies. It grew out of a backend database assignment and is presented here as a software quality portfolio project, with explicit validation, transaction handling and automated checks.
 
----
+## Features
 
-## Oppgave 1 – Databasestruktur og innhold
+- List books or search titles and authors.
+- Borrow an existing copy for an existing borrower.
+- Reject loans for unavailable copies, and reject missing or repeated returns.
+- Display a borrower's loan history.
+- Use parameterized SQL and close connections after each command.
 
-I denne oppgaven ble databasen `ga_bibliotek` opprettet med følgende tabeller:
+This is a local demonstration, without authentication, a web interface, borrower management or due-date tracking. Search uses MySQL `LIKE`: `%` and `_` retain their wildcard meaning.
 
-1. **bok**  
-   - Primærnøkkel: `ISBN`  
-   - Felter: `ISBN`, `Tittel`, `Forfatter`, `AntallSider`, `UtgittÅr`  
-   - Beskrivelse: Inneholder informasjon om alle bøker i biblioteket.
+## Requirements
 
-2. **eksemplar**  
-   - Primærnøkkel: (`ISBN`, `EksNr`)  
-   - Fremmednøkkel: `ISBN` → `bok(ISBN)`  
-   - Beskrivelse: Representerer fysiske eksemplarer av bøker.
+- Python 3.10 or newer (locally verified with Python 3.13).
+- MySQL 8.4; Docker with the Compose plugin is the provided setup route.
+- Internet access for the initial Python package and container downloads.
 
-3. **låner**  
-   - Primærnøkkel: `LNr` (AUTO_INCREMENT)  
-   - Felter: `Fornavn`, `Etternavn`, `Adresse`, `Postnr`, `Poststed`  
-   - Beskrivelse: Inneholder informasjon om lånerne.
+## Install
 
-4. **utlån**  
-   - Primærnøkkel: `UtlånsNr` (AUTO_INCREMENT)  
-   - Fremmednøkler:  
-     - (`ISBN`, `EksNr`) → `eksemplar(ISBN, EksNr)`  
-     - `LNr` → `låner(LNr)`  
-   - Feltet `Levert` har **CHECK (Levert IN (0,1))** for dataintegritet.
+Run these commands from the repository root. Creating the virtual environment and installing the package works in PowerShell, macOS and Linux; select the appropriate activation command.
 
-### Ekstra tiltak
-- Alle tabeller bruker **utf8mb4_unicode_ci** for Unicode-støtte.
-- Det er lagt til indekser på kolonner som brukes i JOIN-operasjoner for ytelse.
-
----
-
-## Oppgave 2 – Datamodell og forklaring
-
-### Datamodell (ER-diagram)
-ER-skjemaet beskriver relasjonene mellom tabellene:
-
-📎 *Se vedlagte fil:* `oppgave2_skjema.png`
-
-### Forklaring av tabeller og nøkler
-
-| Tabell | Primærnøkkel | Fremmednøkler | Kommentar |
-|--------|---------------|----------------|------------|
-| **bok** | ISBN | – | Alle bøker i systemet |
-| **eksemplar** | ISBN, EksNr | bok(ISBN) | Fysiske eksemplarer |
-| **låner** | LNr | – | Registrerte lånere |
-| **utlån** | UtlånsNr | eksemplar, låner | Oversikt over utlån |
-
-- Databasen følger **3NF (Tredje normalform)**.  
-- Det er **referanseintegritet** gjennom FK-koblinger.  
-- **CHECK**, **AUTO_INCREMENT** og **NOT NULL** brukes konsekvent.
-
----
-
-## Oppgave 3 – SQL-spørringer
-
-`oppgave3.sql` inneholder 12 spørringer som dekker følgende krav:
-
-1. Vis alle bøker utgitt etter år 2000  
-2. Vis forfatter og tittel, sortert alfabetisk etter forfatter  
-3. Vis bøker med mer enn 300 sider  
-4. Sett inn ny bok  
-5. Registrer ny låner  
-6. Oppdater adresse til en låner  
-7. Vis utlån med lånernavn og boktittel  
-8. Antall eksemplarer per bok  
-9. Antall utlån per låner (inkludert 0)  
-10. Antall utlån per bok  
-11. Bøker som aldri har vært utlånt  
-12. Forfatter og totalt antall utlån
-
-Alle spørringer er testet mot databasen og returnerer riktige resultater.
-
----
-
-## Oppgave 4 – Python-program (MySQL Connector)
-
-**Fil:** `oppgave4.py`
-
-Programmet gir et kommandolinjegrensesnitt (CLI) for å administrere biblioteket.  
-Alle databaseoperasjoner bruker `mysql.connector` med parameteriserte spørringer for å unngå SQL-injeksjon.
-
-### Funksjoner
-
-| Funksjon | Beskrivelse |
-|-----------|--------------|
-| `connect_to_database()` | Oppretter forbindelse til MySQL. Feilhåndtering inkludert. |
-| `vis_alle_boker()` | Viser alle bøker. (standardhandling uten argumenter) |
-| `sok_bok(tekst)` | Søker i tittel/forfatter. |
-| `registrer_utlan(isbn, eksnr, lnr)` | Oppretter nytt utlån dersom låner og eksemplar finnes og ikke allerede er utlånt. |
-| `lever_bok(utlansnr)` | Marker utlån som levert (hvis ikke allerede). |
-| `vis_lanerhistorikk(lnr)` | Viser historikk over lånerens utlån. |
-
-### Eksempel på bruk
-
-```bash
-# Kjør med argumenter
-python oppgave4.py vis-alle
-python oppgave4.py sok --tekst "Ibsen"
-python oppgave4.py registrer-utlan --isbn 9000000000001 --eksnr 1 --lnr 3
-python oppgave4.py lever-bok --utlansnr 5
-python oppgave4.py historikk --lnr 3
+```text
+python -m venv .venv
 ```
 
-### UX-forbedringer
-- Programmet kan kjøres **uten argumenter**, og viser da automatisk alle bøker.  
-- Klare feilmeldinger for ugyldige låner-IDer eller eksemplarer.  
-- `Levert` kontrolleres før oppdatering for å unngå duplikate leveringer.
+PowerShell:
 
----
-
-## ⚙Konfigurasjon og miljøvariabler
-
-Programmet støtter både kommandolinjeargumenter og miljøvariabler.  
-Dersom du ikke spesifiserer argumenter, leses følgende miljøvariabler automatisk:
-
-```bash
-export DB_HOST=127.0.0.1
-export DB_PORT=3306
-export DB_USER=root
-export DB_PASSWORD=******
-export DB_NAME=ga_bibliotek
+```powershell
+.venv\Scripts\Activate.ps1
 ```
 
-Deretter kan du kjøre:
-```bash
-python oppgave4.py
+macOS / Linux:
+
+```sh
+source .venv/bin/activate
 ```
 
----
+Then:
 
-## Installasjon
-
-Krever Python 3.10+ og MySQL-server.  
-Installer nødvendige pakker:
-
-```bash
-pip install -r requirements.txt
+```text
+python -m pip install -r requirements.txt
+python -m library_loans --help
 ```
 
-**requirements.txt:**
+If PowerShell blocks activation, use `.venv\Scripts\python` in place of `python`. The installed `library-loans` command is equivalent to `python -m library_loans`.
+
+## Start the demo database
+
+Copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell or `cp .env.example .env` in a POSIX shell). Replace both placeholder passwords with local demo credentials, then run:
+
+```text
+docker compose up -d --wait
 ```
-mysql-connector-python
+
+Compose creates the schema and demonstration data on the first start with an empty volume. It binds MySQL to localhost on port 3306. If that port is occupied, change the host port in `compose.yaml` and set `DB_PORT` accordingly.
+
+The Python CLI reads environment variables, **not** the `.env` file. Set `DB_PASSWORD` in your terminal to the same value used in `.env`:
+
+```powershell
+$env:DB_PASSWORD = 'your-local-demo-password'
 ```
 
----
+Or in a POSIX shell:
 
-## Filoversikt
+```sh
+export DB_PASSWORD='your-local-demo-password'
+```
 
-| Filnavn | Beskrivelse |
-|----------|-------------|
-| `oppgave1.sql` | Opprettelse av database, tabeller og eksempeldata |
-| `oppgave2_skjema.png` | ER-diagram for databasen |
-| `oppgave3.sql` | SQL-spørringer (12 stk) |
-| `oppgave4.py` | Python-program med CLI |
-| `requirements.txt` | Avhengigheter |
-| `README.md` | Dokumentasjon (denne filen) |
-| `Arbeidskrav2Backend-17-10-2025.pdf` | Oppgavetekst (referanse) |
+| Variable | Default |
+| --- | --- |
+| `DB_HOST` | `127.0.0.1` |
+| `DB_PORT` | `3306` |
+| `DB_USER` | `library_app` |
+| `DB_PASSWORD` | Empty; configure before connecting |
+| `DB_NAME` | `library_loans` |
 
----
+Connection options (`--host`, `--port`, `--user`, `--password`, `--database`) can appear before or after a subcommand. Prefer the environment for passwords to keep them out of command arguments.
 
-## Oppsummering
+For an existing MySQL server, create an empty UTF-8 database and a user with access to it. In a MySQL client session connected to that database, run `SOURCE sql/schema.sql;` and then `SOURCE sql/seed.sql;` from the repository root. These are one-time initialization scripts, not migrations; they do not drop an existing database. Configure the variables above for your server. Norwegian table and column names are retained from the original data model.
 
-| Deloppgave | Innhold | Status |
-|-------------|----------|---------|
-| Oppgave 1 | Databasestruktur og eksempeldata | ✅ |
-| Oppgave 2 | Datamodell og forklaring | ✅ |
-| Oppgave 3 | 12 SQL-spørringer | ✅ |
-| Oppgave 4 | Python-program med databaseintegrasjon | ✅ |
-| README / Dokumentasjon | Fullstendig og i henhold til retningslinjer | ✅ |
+Stop the demo with `docker compose down`. The named volume keeps data. Schema or seed changes are not reapplied to an existing volume.
 
----
+## Usage
 
-**Arbeidskravet er gjennomført i samsvar med veiledningen og demonstrerer funksjonell databaseintegrasjon mellom SQL og Python.**
+```text
+python -m library_loans
+python -m library_loans search --text Ibsen
+python -m library_loans borrow --isbn 9000000000001 --copy 1 --borrower 3
+python -m library_loans history --borrower 3
+```
+
+With fresh seed data, the search matches *Et dukkehjem* by Henrik Ibsen. Borrowing prints the new loan ID. Use that ID to return the loan, for example:
+
+```text
+python -m library_loans return --loan 2
+```
+
+The example ID is only valid if that loan exists. Borrow optionally accepts `--date 2025-10-29`; otherwise it uses today's date on the client machine. Commands return status `0` on success, `1` for database or lending errors, and `2` for invalid arguments. Omitting a subcommand lists the catalogue.
+
+## Tests and quality focus
+
+No database is needed for the default test command:
+
+```text
+python -m unittest discover -s tests -v
+python -m pip check
+```
+
+Unit tests cover argument routing, invalid input, parameter binding, lending rules, rollback and resource cleanup. They use mocked database connections and do not establish SQL correctness on their own.
+
+To run the MySQL integration tests, start the demo database, configure `DB_PASSWORD`, and enable them:
+
+```powershell
+$env:RUN_MYSQL_TESTS = '1'
+python -m unittest discover -s tests -v
+```
+
+POSIX equivalent:
+
+```sh
+RUN_MYSQL_TESTS=1 python -m unittest discover -s tests -v
+```
+
+Integration tests exercise the lending lifecycle and competing connections. They use unique fixture records, rolling them back or deleting them afterwards; the concurrency test commits temporary fixtures. Use a disposable demo database. Row locks serialize borrowing through this application; direct SQL writers must follow the same locking protocol.
+
+GitHub Actions is configured for unit tests on Python 3.10 and 3.13, plus integration tests against MySQL 8.4. No hosted CI result is claimed until the workflow actually runs.
+
+Local verification: package installation, both help entry points, dependency consistency and 11 unit tests passed on Python 3.13.15. The two integration tests were skipped because no MySQL/Docker runtime was available. The container startup, SQL initialization and database-backed usage examples still require that environment for end-to-end verification.
+
+## Repository layout
+
+| Path | Purpose |
+| --- | --- |
+| `library_loans/cli.py` | English CLI, validation and transaction lifetime |
+| `library_loans/service.py` | Catalogue and lending operations |
+| `sql/schema.sql` | Tables, keys, constraints and indexes |
+| `sql/seed.sql` | Demonstration catalogue and fictional borrower records |
+| `sql/queries.sql` | SQL examples, including data-changing statements; use on demo data |
+| `tests/` | Unit tests and opt-in MySQL integration tests |
+| `compose.yaml` | Local MySQL service with persistent data |
+| `docs/schema.png` | Original database diagram |
+| `docs/academic/` | Assignment PDF and original README retained for provenance |
+
+The original README is a historical document; its feature and test claims are not the current verification record. Some catalogue ISBNs and book metadata are illustrative rather than bibliographic reference data.
+
+## Changes from the assignment version
+
+The entry point changed from `oppgave4.py` to `python -m library_loans`. Commands are now `list`, `search`, `borrow`, `return` and `history`, with English option names. The default database is now `library_loans`; use `DB_NAME=ga_bibliotek` for an existing original database. No existing database is migrated automatically.
+
+The hard-coded password was removed. Invalid operations now return a failure status, unknown arguments are rejected, database flags no longer bypass the requested command, and each invocation closes its connection. Loans use locking reads to prevent concurrent borrowing through the CLI. The default loan date now comes from the client clock instead of the database clock. The SQL example for never-borrowed books now checks all copies correctly.

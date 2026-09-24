@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "library-loans-cli"
+version = "0.1.0"
+description = "A MySQL command-line application for tracking library loans"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["mysql-connector-python==9.4.0"]
+
+[project.scripts]
+library-loans = "library_loans.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["library_loans*"]

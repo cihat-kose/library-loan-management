@@ -1,4 +1,4 @@
--- OPPGAVE 3: SQL-spørringer
+-- SQL examples: includes INSERT and UPDATE statements; use only on demo data.
 
 -- 1) Alle bøker publisert etter år 2000
 SELECT ISBN, Tittel, Forfatter, UtgittÅr
@@ -60,13 +60,10 @@ LEFT JOIN utlån u ON u.ISBN = e.ISBN AND u.EksNr = e.EksNr
 GROUP BY b.ISBN, b.Tittel
 ORDER BY AntallUtlån DESC, b.Tittel;
 
--- 11) Alle bøker som ikke har blitt lånt ut
+-- 11) Books that have never been borrowed (across every copy)
 SELECT b.ISBN, b.Tittel
 FROM bok b
-LEFT JOIN eksemplar e ON e.ISBN = b.ISBN
-LEFT JOIN utlån u ON u.ISBN = e.ISBN AND u.EksNr = e.EksNr
-WHERE u.UtlånsNr IS NULL
-GROUP BY b.ISBN, b.Tittel
+WHERE NOT EXISTS (SELECT 1 FROM utlån u WHERE u.ISBN = b.ISBN)
 ORDER BY b.Tittel;
 
 -- 12) Forfatter og antall utlånte bøker per forfatter
@@ -78,14 +75,3 @@ GROUP BY b.Forfatter
 ORDER BY AntallUtlån DESC, b.Forfatter;
 
 
--- (Ekstra) Alternativ for spørring 11 med NOT EXISTS (samme resultat):
--- Viser bøker som aldri har vært utlånt (uavhengig av antall eksemplarer)
-SELECT b.ISBN, b.Tittel
-FROM bok b
-WHERE NOT EXISTS (
-  SELECT 1
-  FROM eksemplar e
-  JOIN utlån u ON u.ISBN = e.ISBN AND u.EksNr = e.EksNr
-  WHERE e.ISBN = b.ISBN
-)
-ORDER BY b.Tittel;
