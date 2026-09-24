@@ -54,8 +54,8 @@ python -m library_loans interactive
 
 The first run creates `library_loans.db`, applies the schema and inserts the
 fictional demonstration catalogue and borrowers. The database file is local
-and is ignored by Git. Press **Run** in PyCharm using the shared
-**Library Loan Management (interactive)** configuration to start the menu.
+and is ignored by Git. In PyCharm, open `library_loans/__main__.py`, set the
+script parameters to `interactive`, and press **Run**.
 
 ## Usage
 
@@ -106,4 +106,3 @@ The tests use temporary SQLite files and do not require external services.
 | `library_loans/database.py` | SQLite creation, schema and seed data |
 | `library_loans/service.py` | Catalogue and lending operations |
 | `tests/` | Automated unit and lifecycle tests |
-| `docs/academic/` | Original assignment material retained for provenance |
