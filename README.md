@@ -57,6 +57,12 @@ fictional demonstration catalogue and borrowers. The database file is local
 and is ignored by Git. In PyCharm, open `library_loans/__main__.py`, set the
 script parameters to `interactive`, and press **Run**.
 
+## Database design
+
+The SQLite tables and relationships are documented in
+[`docs/database-schema.md`](docs/database-schema.md). The diagram is written
+in Mermaid, so GitHub renders it directly without committed image files.
+
 ## Usage
 
 ```text
