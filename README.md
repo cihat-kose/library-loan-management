@@ -144,7 +144,7 @@ Integration tests exercise the lending lifecycle and competing connections. They
 
 GitHub Actions is configured for unit tests on Python 3.10 and 3.13, plus integration tests against MySQL 8.4. No hosted CI result is claimed until the workflow actually runs.
 
-Local verification: package installation, both help entry points, dependency consistency and 11 unit tests passed on Python 3.13.15. The two integration tests were skipped because no MySQL/Docker runtime was available. The container startup, SQL initialization and database-backed usage examples still require that environment for end-to-end verification.
+Local verification: package installation, both help entry points, dependency consistency and 15 unit tests passed on Python 3.13.15. The two integration tests were skipped because no MySQL/Docker runtime was available. The container startup, SQL initialization and database-backed usage examples still require that environment for end-to-end verification.
 
 ## Repository layout
 
