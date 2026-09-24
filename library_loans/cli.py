@@ -1,13 +1,15 @@
-"""Command parsing, connection lifetime and console output."""
+"""Command parsing, SQLite connection lifetime and console output."""
 
 import argparse
 from datetime import date
 import os
+import sqlite3
 import sys
 
-import mysql.connector
+from library_loans import database, service
 
-from library_loans import service
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 
 def positive_integer(value):
@@ -31,18 +33,14 @@ def iso_date(value):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(description="Library Loan Management (MySQL)")
+    parser = argparse.ArgumentParser(description="Library Loan Management (SQLite)")
 
     def database_options(target, suppress=False):
-        for name, default in (("host", "127.0.0.1"), ("port", "3306"),
-                              ("user", "library_app"), ("password", "library-app-local"),
-                              ("database", "library_loans")):
-            env_name = "DB_NAME" if name == "database" else f"DB_{name.upper()}"
-            target.add_argument(
-                f"--{name}", type=positive_integer if name == "port" else str,
-                default=argparse.SUPPRESS if suppress else os.getenv(env_name, default),
-                help=f"MySQL {name}; defaults to {env_name}",
-            )
+        target.add_argument(
+            "--database",
+            default=argparse.SUPPRESS if suppress else os.getenv("DB_PATH"),
+            help="SQLite database file; defaults to library_loans.db",
+        )
 
     database_options(parser)
     commands = parser.add_subparsers(dest="command")
@@ -118,16 +116,13 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     conn = None
     try:
-        conn = mysql.connector.connect(
-            host=args.host, port=args.port, user=args.user, password=args.password,
-            database=args.database, connection_timeout=5, autocommit=False,
-        )
+        conn = database.connect(args.database)
         message = run(conn, args)
         conn.commit()
         if message:
             print(message)
         return 0
-    except (mysql.connector.Error, service.LoanError) as exc:
+    except (sqlite3.Error, service.LoanError) as exc:
         if conn is not None:
             conn.rollback()
         print(f"Error: {exc}", file=sys.stderr)
@@ -148,46 +143,28 @@ def interactive(conn, input_fn=input, output_fn=print):
         output_fn("5. Loan history")
         output_fn("6. Exit")
         choice = input_fn("Choose an option: ").strip()
-
         try:
             if choice == "1":
-                print_table(
-                    ["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
-                    service.list_books(conn),
-                )
+                print_table(["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
+                            service.list_books(conn))
             elif choice == "2":
-                text = input_fn("Search text: ").strip()
-                print_table(
-                    ["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
-                    service.search_books(conn, text),
-                )
+                print_table(["ISBN", "Title", "Author", "Publisher", "Year", "Pages"],
+                            service.search_books(conn, input_fn("Search text: ").strip()))
             elif choice == "3":
-                borrower = _prompt_positive_integer(
-                    "Borrower ID: ", input_fn, output_fn
-                )
+                borrower = _prompt_positive_integer("Borrower ID: ", input_fn, output_fn)
                 isbn = input_fn("ISBN: ").strip()
-                copy_number = _prompt_positive_integer(
-                    "Copy number: ", input_fn, output_fn
-                )
-                loan_date = _prompt_date(
-                    "Loan date (YYYY-MM-DD, blank for today): ", input_fn, output_fn
-                )
-                loan_id = service.borrow_book(
-                    conn, borrower, isbn, copy_number, loan_date
-                )
-                output_fn(f"Loan created: {loan_id}")
+                copy_number = _prompt_positive_integer("Copy number: ", input_fn, output_fn)
+                loan_date = _prompt_date("Loan date (YYYY-MM-DD, blank for today): ",
+                                         input_fn, output_fn)
+                output_fn(f"Loan created: {service.borrow_book(conn, borrower, isbn, copy_number, loan_date)}")
             elif choice == "4":
                 loan_id = _prompt_positive_integer("Loan ID: ", input_fn, output_fn)
                 service.return_book(conn, loan_id)
                 output_fn(f"Loan {loan_id} returned.")
             elif choice == "5":
-                borrower = _prompt_positive_integer(
-                    "Borrower ID: ", input_fn, output_fn
-                )
-                print_table(
-                    ["Loan", "Title", "Author", "Date", "Status"],
-                    service.loan_history(conn, borrower),
-                )
+                borrower = _prompt_positive_integer("Borrower ID: ", input_fn, output_fn)
+                print_table(["Loan", "Title", "Author", "Date", "Status"],
+                            service.loan_history(conn, borrower))
             elif choice == "6":
                 output_fn("Goodbye.")
                 return 0
@@ -195,6 +172,6 @@ def interactive(conn, input_fn=input, output_fn=print):
                 output_fn("Invalid option. Choose a number from 1 to 6.")
                 continue
             conn.commit()
-        except (mysql.connector.Error, service.LoanError) as exc:
+        except (sqlite3.Error, service.LoanError) as exc:
             conn.rollback()
             output_fn(f"Error: {exc}")

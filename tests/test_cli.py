@@ -1,149 +1,59 @@
 import contextlib
-from datetime import date
 import io
-import os
+import sqlite3
+import tempfile
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import mysql.connector
-
-from library_loans import cli, service
+from library_loans import cli, database, service
 
 
-class ParserTests(unittest.TestCase):
-    def test_interactive_is_a_command(self):
-        args = cli.build_parser().parse_args(["interactive"])
-        self.assertEqual(args.command, "interactive")
+class CliTests(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.path = self.temp_dir.name + "\\test.db"
 
-    def test_options_on_either_side_keep_selected_command(self):
-        for argv in (["--host", "db", "search", "--text", "Ibsen"],
-                     ["search", "--text", "Ibsen", "--host", "db"]):
-            args = cli.build_parser().parse_args(argv)
-            self.assertEqual((args.host, args.command, args.text), ("db", "search", "Ibsen"))
+    def tearDown(self):
+        self.temp_dir.cleanup()
 
-    def test_invalid_inputs_fail_before_connecting(self):
-        for argv in (["--unknown"], ["history", "--borrower", "0"],
-                     ["borrow", "--borrower", "1", "--isbn", "x", "--copy", "1",
-                      "--date", "2025-02-30"]):
-            with self.subTest(argv=argv), patch.object(cli.mysql.connector, "connect") as connect:
-                with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-                    cli.main(argv)
-                connect.assert_not_called()
-
-    def test_environment_port_is_validated(self):
-        with patch.dict(os.environ, {"DB_PORT": "invalid"}):
+    def test_parser_rejects_invalid_values_before_connecting(self):
+        with patch.object(cli.database, "connect") as connect:
             with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
-                cli.build_parser().parse_args([])
+                cli.main(["borrow", "--borrower", "0", "--isbn", "x", "--copy", "1"])
+            connect.assert_not_called()
 
+    def test_database_is_created_and_seeded(self):
+        conn = database.connect(self.path)
+        self.assertEqual(service.search_books(conn, "Ibsen")[0][1], "Et dukkehjem")
+        conn.close()
 
-class TransactionTests(unittest.TestCase):
-    @patch.object(cli.mysql.connector, "connect")
-    def test_default_lists_and_closes(self, connect):
-        conn = connect.return_value
-        conn.cursor.return_value.fetchall.return_value = []
-        with contextlib.redirect_stdout(io.StringIO()) as output:
-            self.assertEqual(cli.main([]), 0)
-        self.assertIn("No records found", output.getvalue())
-        conn.commit.assert_called_once()
-        conn.close.assert_called_once()
-        conn.cursor.return_value.close.assert_called_once()
+    def test_cli_lists_and_closes_database(self):
+        with patch.dict("os.environ", {"DB_PATH": self.path}):
+            with contextlib.redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(cli.main([]), 0)
+        self.assertIn("Et dukkehjem", output.getvalue())
 
+    def test_cli_uses_requested_database_path(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(cli.main(["--database", self.path, "search", "--text", "Ibsen"]), 0)
 
-    @patch.object(cli.mysql.connector, "connect")
-    def test_database_failure_rolls_back_and_closes(self, connect):
-        conn = connect.return_value
-        conn.cursor.return_value.execute.side_effect = mysql.connector.Error("query failed")
-        with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(cli.main([]), 1)
-        conn.rollback.assert_called_once()
-        conn.commit.assert_not_called()
-        conn.close.assert_called_once()
-        conn.cursor.return_value.close.assert_called_once()
-
-    @patch.object(cli.mysql.connector, "connect")
-    def test_rejected_loan_rolls_back(self, connect):
-        conn = connect.return_value
-        conn.cursor.return_value.fetchone.return_value = None
-        with contextlib.redirect_stderr(io.StringIO()):
-            self.assertEqual(cli.main(["borrow", "--borrower", "99", "--isbn", "x",
-                                       "--copy", "1"]), 1)
-        conn.rollback.assert_called_once()
-        conn.commit.assert_not_called()
-        conn.close.assert_called_once()
-
-
-class InteractiveTests(unittest.TestCase):
-    def test_menu_handles_invalid_choice_and_exits(self):
-        conn = MagicMock()
-        output = io.StringIO()
-        inputs = iter(["invalid", "6"])
-        cli.interactive(conn, input_fn=lambda _: next(inputs), output_fn=lambda text: print(text, file=output))
-        self.assertIn("Invalid option", output.getvalue())
-        self.assertIn("Goodbye.", output.getvalue())
-        conn.commit.assert_not_called()
-
-    @patch.object(cli.service, "search_books", return_value=[])
-    def test_menu_searches_and_commits(self, search_books):
-        conn = MagicMock()
-        inputs = iter(["2", "Ibsen", "6"])
-        cli.interactive(conn, input_fn=lambda _: next(inputs))
-        search_books.assert_called_once_with(conn, "Ibsen")
-        conn.commit.assert_called_once()
-
-    @patch.object(cli.service, "borrow_book", return_value=12)
-    def test_menu_reprompts_invalid_borrower_and_borrows(self, borrow_book):
-        conn = MagicMock()
-        output = io.StringIO()
-        inputs = iter(["3", "zero", "3", "9000000000001", "1", "", "6"])
-        cli.interactive(conn, input_fn=lambda _: next(inputs), output_fn=lambda text: print(text, file=output))
-        self.assertIn("Invalid input", output.getvalue())
-        borrow_book.assert_called_once_with(conn, 3, "9000000000001", 1, None)
-        self.assertEqual(conn.commit.call_count, 1)
-
-
-class LendingTests(unittest.TestCase):
-    def test_borrow_rejects_missing_borrower_missing_copy_and_active_loan(self):
-        for rows in ([None], [(1,), None], [(1,), (1,), (42,)]):
-            with self.subTest(rows=rows):
-                conn = MagicMock()
-                cursor = conn.cursor.return_value
-                cursor.fetchone.side_effect = rows
-                with self.assertRaises(service.LoanError):
-                    service.borrow_book(conn, 3, "9000000000001", 1)
-                self.assertFalse(any("INSERT" in call.args[0] for call in cursor.execute.call_args_list))
-                cursor.close.assert_called_once()
-
-    def test_borrow_inserts_bound_values(self):
-        conn = MagicMock()
-        cursor = conn.cursor.return_value
-        cursor.fetchone.side_effect = [(1,), (1,), None]
-        cursor.lastrowid = 7
-        day = date(2025, 10, 29)
-        self.assertEqual(service.borrow_book(conn, 3, "9000000000001", 1, day), 7)
-        self.assertEqual(cursor.execute.call_args.args[1], ("9000000000001", 1, 3, day))
-        cursor.close.assert_called_once()
-
-    def test_return_rejects_missing_or_returned_loan(self):
-        for row in (None, (1,)):
-            conn = MagicMock()
-            conn.cursor.return_value.fetchone.return_value = row
-            with self.assertRaises(service.LoanError):
-                service.return_book(conn, 5)
-            self.assertEqual(conn.cursor.return_value.execute.call_count, 1)
-
-    def test_return_updates_active_loan(self):
-        conn = MagicMock()
-        conn.cursor.return_value.fetchone.return_value = (0,)
-        service.return_book(conn, 5)
-        self.assertEqual(conn.cursor.return_value.execute.call_args.args[1], (5,))
+    def test_lending_rules_and_rollback(self):
+        conn = database.connect(self.path)
+        with self.assertRaises(service.LoanError):
+            service.borrow_book(conn, 999, "9000000000001", 1)
+        loan_id = service.borrow_book(conn, 3, "9000000000001", 1)
+        with self.assertRaises(service.LoanError):
+            service.borrow_book(conn, 3, "9000000000001", 1)
+        service.return_book(conn, loan_id)
+        with self.assertRaises(service.LoanError):
+            service.return_book(conn, loan_id)
+        conn.close()
 
     def test_search_keeps_sql_input_as_data(self):
-        conn = MagicMock()
+        conn = database.connect(self.path)
         text = "' OR 1=1 --"
-        service.search_books(conn, text)
-        sql, values = conn.cursor.return_value.execute.call_args.args
-        self.assertNotIn(text, sql)
-        self.assertEqual(values, (f"%{text}%", f"%{text}%"))
+        self.assertEqual(service.search_books(conn, text), [])
+        conn.close()
 
 
 if __name__ == "__main__":

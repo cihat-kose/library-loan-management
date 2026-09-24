@@ -16,3 +16,4 @@ dist/
 .coverage
 htmlcov/
 .pytest_cache/
+library_loans.db
